@@ -1,0 +1,42 @@
+node_modules/
+dist/
+dist-electron/
+release/
+
+# SQLite database files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker
+docker/nginx/certs/*.pem
+docker/nginx/certs/*.key
+
+# Editor
+.vscode/settings.json
+.idea/
+*.swp
+
+# Claude Code
+.claude/
+
+# Electron builder cache
+.electron-builder-cache/
