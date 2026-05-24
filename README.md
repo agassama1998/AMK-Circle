@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🕌 AMK Circle
+# 🕌 AMK-Circle
 ### Multi-Tenant Islamic Education & Community Management Platform
 
 [![Electron](https://img.shields.io/badge/Electron-29-47848F?logo=electron&logoColor=white)](https://electronjs.org)
