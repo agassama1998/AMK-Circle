@@ -39,6 +39,14 @@ contextBridge.exposeInMainWorld('api', {
     delete:   (d) => ipc('students:delete', d),
   },
 
+  // ─── Parents ──────────────────────────────────────────────────────────────
+  parents: {
+    getAll:  (d) => ipc('parents:getAll', d),
+    create:  (d) => ipc('parents:create', d),
+    update:  (d) => ipc('parents:update', d),
+    delete:  (d) => ipc('parents:delete', d),
+  },
+
   // ─── Teachers ─────────────────────────────────────────────────────────────
   teachers: {
     getAll:  (d) => ipc('teachers:getAll', d),
@@ -53,6 +61,24 @@ contextBridge.exposeInMainWorld('api', {
     create:  (d) => ipc('classes:create', d),
     update:  (d) => ipc('classes:update', d),
     delete:  (d) => ipc('classes:delete', d),
+  },
+
+  // ─── Subjects ─────────────────────────────────────────────────────────────
+  subjects: {
+    getAll:  (d) => ipc('subjects:getAll', d),
+    create:  (d) => ipc('subjects:create', d),
+    update:  (d) => ipc('subjects:update', d),
+    delete:  (d) => ipc('subjects:delete', d),
+  },
+
+  // ─── Exams & Grades ───────────────────────────────────────────────────────
+  exams: {
+    getAll:          (d) => ipc('exams:getAll', d),
+    create:          (d) => ipc('exams:create', d),
+    update:          (d) => ipc('exams:update', d),
+    delete:          (d) => ipc('exams:delete', d),
+    getGrades:       (d) => ipc('exams:getGrades', d),
+    bulkSaveGrades:  (d) => ipc('exams:bulkSaveGrades', d),
   },
 
   // ─── Attendance ───────────────────────────────────────────────────────────

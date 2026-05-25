@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Building2, Users, GraduationCap, BookOpen,
   Calendar, Wallet, BarChart3, Settings, LogOut, ChevronDown,
   Landmark, Star, Heart, Shield, UserCheck, Menu, X, BookMarked,
-  Bed, DollarSign, ClipboardList, Bell, Globe, Home
+  Bed, DollarSign, ClipboardList, Bell, Globe, Home, ClipboardCheck,
+  Library
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -34,10 +35,13 @@ function getOrgNav(role) {
   ]})
 
   nav.push({ label: 'School', items: [
-    { to: '/school/students',   icon: Users,       label: 'Students' },
-    { to: '/school/teachers',   icon: UserCheck,   label: 'Teachers' },
-    { to: '/school/classes',    icon: BookOpen,    label: 'Classes' },
-    { to: '/school/attendance', icon: ClipboardList, label: 'Attendance' },
+    { to: '/school/students',   icon: Users,          label: 'Students' },
+    { to: '/school/parents',    icon: Heart,          label: 'Parents' },
+    { to: '/school/teachers',   icon: UserCheck,      label: 'Teachers' },
+    { to: '/school/classes',    icon: BookOpen,       label: 'Classes' },
+    { to: '/school/subjects',   icon: Library,        label: 'Subjects' },
+    { to: '/school/exams',      icon: ClipboardCheck, label: 'Exams & Grades' },
+    { to: '/school/attendance', icon: ClipboardList,  label: 'Attendance' },
   ]})
 
   nav.push({ label: 'Dara / Hifz', items: [
@@ -48,7 +52,7 @@ function getOrgNav(role) {
   nav.push({ label: 'Finance', items: [
     { to: '/finance',          icon: Wallet,       label: 'Payments' },
     { to: '/finance/expenses', icon: DollarSign,   label: 'Expenses' },
-    { to: '/finance/salaries', icon: Heart,        label: 'Salaries' },
+    { to: '/finance/salaries', icon: GraduationCap, label: 'Salaries' },
   ]})
 
   nav.push({ label: 'Reports', items: [

@@ -128,15 +128,14 @@ AMK Circle is a **multi-tenant** desktop ERP system built with Electron.js. A si
 - Full audit log viewer across all organizations
 
 ### 🏫 School / College Management
-- Student enrollment with auto-generated IDs (STU-XXXX)
-- Parent / Guardian records linked to students
-- Teacher management with auto-generated Employee IDs (EMP-XXX)
-- Class management with capacity tracking and room/schedule assignment
-- Subject management per class and teacher
-- Exams scheduling (written, oral, practical) with pass/fail marks
-- Grades recording per student per exam with letter grades
-- Daily attendance with upsert (mark entire class or individual students)
-- Quran progress tracking per student
+- Student enrollment with auto-generated IDs (STU-XXXX), parent contact info, class assignment, status tracking
+- **Parents & Guardians** — dedicated records with relationship, phone, email, address, occupation; linked to students
+- Teacher management with auto-generated Employee IDs (EMP-XXX), specialization, qualifications
+- Class management with capacity, room, schedule, grade level, and teacher assignment
+- **Subjects** — manage subjects per class and teacher with optional subject code
+- **Exams & Grades** — schedule exams (written, oral, practical, MCQ, project); enter marks per student; auto-calculated letter grades (A+ → F) and pass/fail; bulk save
+- Daily attendance with upsert (mark entire class or individual students); statuses: present / absent / late / excused
+- Quran progress tracking per student — surah, ayah range, juz, pages, type (memorization / revision), grade
 
 ### 🕌 Masjid Management
 - Prayer times management (Fajr → Isha + Iqamah offsets)
@@ -431,32 +430,32 @@ amk-circle/
 
 24 tables — all include `organization_id` for multi-tenancy:
 
-| Table | Purpose |
-|-------|---------|
-| `organizations` | Root tenant table — name, type, branding, subscription |
-| `users` | All users across all orgs; `organization_id` nullable for super_admin |
-| `parents` | Parent / guardian records linked to students |
-| `students` | Student enrollment with auto-IDs and parent FK |
-| `teachers` | Staff with employee IDs and qualifications |
-| `classes` | Classroom with teacher FK, capacity, schedule |
-| `subjects` | Subjects per class and teacher |
-| `attendance` | Daily per-student status (UNIQUE on org+student+date) |
-| `exams` | Exam records with type, marks, and status |
-| `grades` | Student marks per exam (UNIQUE on exam+student) |
-| `quran_progress` | Surah/ayah/juz progress per student |
-| `hifz_milestones` | Memorisation milestone records |
-| `dormitories` | Dara boarding rooms with supervisor |
-| `boarding_assignments` | Student ↔ room assignments with fee and meal plan |
-| `prayer_times` | 5 prayers + Iqamah + Jumu'ah per org (UNIQUE on org+schedule) |
-| `events` | Community events with category and visibility |
-| `announcements` | Org announcements with audience targeting |
-| `khutbah` | Jumu'ah sermon records |
-| `volunteers` | Volunteer registry with skills and availability |
-| `payments` | Income/tuition/donations (UNIQUE on org+receipt_number) |
-| `expenses` | Organizational expenses with vendor and approval |
-| `salaries` | Teacher payroll (UNIQUE on org+teacher+month) |
-| `org_settings` | App settings per organization |
-| `audit_logs` | Immutable action log |
+| Table | Status | Purpose |
+|-------|--------|---------|
+| `organizations` | ✅ Live | Root tenant table — name, type, branding, subscription |
+| `users` | ✅ Live | All users across all orgs; `organization_id` nullable for super_admin |
+| `students` | ✅ Live | Student enrollment with auto-IDs, parent contact fields |
+| `teachers` | ✅ Live | Staff with employee IDs and qualifications |
+| `classes` | ✅ Live | Classroom with teacher FK, capacity, schedule |
+| `attendance` | ✅ Live | Daily per-student status (UNIQUE on org+student+date) |
+| `quran_progress` | ✅ Live | Surah/ayah/juz progress per student |
+| `hifz_milestones` | ✅ Live | Memorisation milestone records |
+| `dormitories` | ✅ Live | Dara boarding rooms with supervisor |
+| `boarding_assignments` | ✅ Live | Student ↔ room assignments with fee and meal plan |
+| `prayer_times` | ✅ Live | 5 prayers + Iqamah + Jumu'ah per org (UNIQUE on org+schedule) |
+| `events` | ✅ Live | Community events with category and visibility |
+| `announcements` | ✅ Live | Org announcements with audience targeting |
+| `khutbah` | ✅ Live | Jumu'ah sermon records |
+| `volunteers` | ✅ Live | Volunteer registry with skills and availability |
+| `payments` | ✅ Live | Income/tuition/donations (UNIQUE on org+receipt_number) |
+| `expenses` | ✅ Live | Organizational expenses with vendor and approval |
+| `salaries` | ✅ Live | Teacher payroll (UNIQUE on org+teacher+month) |
+| `org_settings` | ✅ Live | App settings per organization |
+| `audit_logs` | ✅ Live | Immutable action log |
+| `parents` | ✅ Live | Dedicated parent/guardian records linked to students |
+| `subjects` | ✅ Live | Subject management per class and teacher |
+| `exams` | ✅ Live | Exam scheduling with type and pass/fail marks |
+| `grades` | ✅ Live | Student marks per exam with auto letter grades |
 
 ---
 
@@ -894,6 +893,12 @@ The receipt is saved directly via `jsPDF`'s `doc.save()`. On Windows, files go t
 
 ## Roadmap
 
+### 🔨 Recently Shipped
+- [x] **Exams & Grades** — schedule exams, enter marks, auto letter grades (A+→F), pass/fail
+- [x] **Subjects** — subject management per class and teacher
+- [x] **Parents module** — dedicated parent/guardian profiles linked to students
+
+### 🗺️ Planned
 - [ ] **Cloud sync** — optional PostgreSQL backend via Express.js REST API
 - [ ] **Mobile companion** — React Native app for parents (attendance, grades)
 - [ ] **Arabic RTL UI** — full right-to-left layout toggle

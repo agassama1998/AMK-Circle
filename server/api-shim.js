@@ -83,6 +83,13 @@
       delete:  function (d) { return call('students:delete', d) },
     },
 
+    parents: {
+      getAll:  function (d) { return call('parents:getAll', d) },
+      create:  function (d) { return call('parents:create', d) },
+      update:  function (d) { return call('parents:update', d) },
+      delete:  function (d) { return call('parents:delete', d) },
+    },
+
     teachers: {
       getAll:  function (d) { return call('teachers:getAll', d) },
       create:  function (d) { return call('teachers:create', d) },
@@ -95,6 +102,22 @@
       create:  function (d) { return call('classes:create', d) },
       update:  function (d) { return call('classes:update', d) },
       delete:  function (d) { return call('classes:delete', d) },
+    },
+
+    subjects: {
+      getAll:  function (d) { return call('subjects:getAll', d) },
+      create:  function (d) { return call('subjects:create', d) },
+      update:  function (d) { return call('subjects:update', d) },
+      delete:  function (d) { return call('subjects:delete', d) },
+    },
+
+    exams: {
+      getAll:         function (d) { return call('exams:getAll', d) },
+      create:         function (d) { return call('exams:create', d) },
+      update:         function (d) { return call('exams:update', d) },
+      delete:         function (d) { return call('exams:delete', d) },
+      getGrades:      function (d) { return call('exams:getGrades', d) },
+      bulkSaveGrades: function (d) { return call('exams:bulkSaveGrades', d) },
     },
 
     attendance: {

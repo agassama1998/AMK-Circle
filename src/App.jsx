@@ -14,6 +14,9 @@ const StudentsPage     = lazy(() => import('./pages/school/StudentsPage'))
 const TeachersPage     = lazy(() => import('./pages/school/TeachersPage'))
 const ClassesPage      = lazy(() => import('./pages/school/ClassesPage'))
 const AttendancePage   = lazy(() => import('./pages/school/AttendancePage'))
+const ParentsPage      = lazy(() => import('./pages/school/ParentsPage'))
+const SubjectsPage     = lazy(() => import('./pages/school/SubjectsPage'))
+const ExamsPage        = lazy(() => import('./pages/school/ExamsPage'))
 const HifzPage         = lazy(() => import('./pages/dara/HifzPage'))
 const BoardingPage     = lazy(() => import('./pages/dara/BoardingPage'))
 const FinancePage      = lazy(() => import('./pages/finance/FinancePage'))
@@ -74,6 +77,9 @@ export default function App() {
           <Route path="school/teachers" element={<TeachersPage />} />
           <Route path="school/classes"  element={<ClassesPage />} />
           <Route path="school/attendance" element={<AttendancePage />} />
+          <Route path="school/parents"   element={<ParentsPage />} />
+          <Route path="school/subjects"  element={<SubjectsPage />} />
+          <Route path="school/exams"     element={<ExamsPage />} />
           <Route path="dara/hifz"       element={<HifzPage />} />
           <Route path="dara/boarding"   element={<BoardingPage />} />
           <Route path="finance"         element={<FinancePage />} />
