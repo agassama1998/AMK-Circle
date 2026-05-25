@@ -21,6 +21,7 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Demo Credentials](#demo-credentials)
+- [Screenshots](#screenshots)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
@@ -181,6 +182,52 @@ AMK Circle is a **multi-tenant** desktop ERP system built with Electron.js. A si
 | **Finance** | `finance1` | `Finance@123!` | Finance & reports |
 
 **Demo Organization:** IECC – Islamic Educational & Community Center, Minnesota, USA
+
+---
+
+## Screenshots
+
+### Login
+![Login](screenshots/01-login.png)
+
+### Super Admin — Platform Dashboard
+![Super Admin Dashboard](screenshots/02-super-dashboard.png)
+
+### Super Admin — Organizations
+![Organizations](screenshots/03-organizations.png)
+
+### Super Admin — Audit Logs
+![Audit Logs](screenshots/04-audit-logs.png)
+
+### Org Dashboard
+![Org Dashboard](screenshots/05-org-dashboard.png)
+
+### Students
+![Students](screenshots/06-students.png)
+
+### Teachers
+![Teachers](screenshots/07-teachers.png)
+
+### Attendance
+![Attendance](screenshots/08-attendance.png)
+
+### Finance — Payments
+![Finance](screenshots/09-finance.png)
+
+### Finance — Expenses
+![Expenses](screenshots/10-expenses.png)
+
+### Masjid
+![Masjid](screenshots/11-masjid.png)
+
+### Hifz / Quran Progress
+![Hifz](screenshots/12-hifz.png)
+
+### Reports & Analytics
+![Reports](screenshots/13-reports.png)
+
+### Settings
+![Settings](screenshots/14-settings.png)
 
 ---
 

@@ -38,5 +38,8 @@ docker/nginx/certs/*.key
 # Claude Code
 .claude/
 
+# Screenshot capture tool (keep PNGs, ignore the script)
+screenshots/capture.js
+
 # Electron builder cache
 .electron-builder-cache/
