@@ -21,7 +21,6 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Demo Credentials](#demo-credentials)
-- [Screenshots](#screenshots)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
@@ -129,8 +128,12 @@ AMK Circle is a **multi-tenant** desktop ERP system built with Electron.js. A si
 
 ### 🏫 School / College Management
 - Student enrollment with auto-generated IDs (STU-XXXX)
+- Parent / Guardian records linked to students
 - Teacher management with auto-generated Employee IDs (EMP-XXX)
-- Class management with capacity tracking
+- Class management with capacity tracking and room/schedule assignment
+- Subject management per class and teacher
+- Exams scheduling (written, oral, practical) with pass/fail marks
+- Grades recording per student per exam with letter grades
 - Daily attendance with upsert (mark entire class or individual students)
 - Quran progress tracking per student
 
@@ -197,13 +200,14 @@ AMK Circle is a **multi-tenant** desktop ERP system built with Electron.js. A si
 ├─────────────────────────────────────────────────────────┤
 │                  React Renderer Process                   │
 │  ┌───────────┐  ┌────────────┐  ┌──────────────────┐   │
-│  │  AuthCtx  │  │  ThemCtx   │  │  React Router    │   │
+│  │  AuthCtx  │  │  ThemeCtx  │  │  React Router    │   │
 │  │  (JWT)    │  │  (dark/    │  │  (lazy-loaded    │   │
 │  │           │  │   light)   │  │   pages)         │   │
 │  └───────────┘  └────────────┘  └──────────────────┘   │
 │  ┌──────────────────────────────────────────────────┐   │
-│  │  Pages: Dashboard · Students · Finance · Masjid  │   │
-│  │         Hifz · Attendance · Reports · Settings   │   │
+│  │  Dashboard · Students · Teachers · Classes       │   │
+│  │  Attendance · Finance · Masjid · Hifz · Boarding │   │
+│  │  Reports · Users · Settings · Super Admin panel  │   │
 │  └──────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -223,11 +227,12 @@ AMK Circle is a **multi-tenant** desktop ERP system built with Electron.js. A si
 | Charts | Recharts |
 | Database | SQLite via better-sqlite3 9 |
 | Auth | JWT (jsonwebtoken) + bcryptjs |
+| HTTP (Docker mode) | Express 4 + Axios |
 | PDF | jsPDF + jspdf-autotable |
 | Excel | SheetJS (xlsx) |
 | Icons | Lucide React |
 | Fonts | Inter (Latin) + Amiri (Arabic) |
-| Packaging | Electron Builder (NSIS Windows installer) |
+| Packaging | Electron Builder (NSIS / DMG / AppImage) |
 
 ---
 
@@ -311,21 +316,25 @@ amk-circle/
 │   ├── main.js                 # BrowserWindow, IPC handler loader
 │   ├── preload.js              # Secure contextBridge API surface
 │   ├── database/
-│   │   ├── schema.js           # All 20+ CREATE TABLE statements
+│   │   ├── schema.js           # 24 CREATE TABLE statements + indexes
 │   │   └── db.js               # DB init, helpers, audit(), seed data
-│   └── handlers/
+│   └── handlers/               # 12 IPC handler modules (89 channels)
 │       ├── auth.js             # Login, logout, change-password
 │       ├── organizations.js    # Multi-org CRUD (super admin)
 │       ├── users.js            # User CRUD + password reset
 │       ├── students.js         # Student CRUD + Quran progress
 │       ├── teachers.js         # Teacher CRUD
-│       ├── classes.js          # Class management
+│       ├── classes.js          # Class + subject management
 │       ├── attendance.js       # Daily attendance upsert
 │       ├── masjid.js           # Prayer times, events, khutbah, volunteers
 │       ├── finance.js          # Payments, expenses, salaries
 │       ├── dara.js             # Hifz progress, boarding, dormitories
 │       ├── reports.js          # Dashboard stats, platform stats
 │       └── settings.js         # Org profile, app settings
+│
+├── server/                     # Docker / web mode only
+│   ├── index.js                # Express server — HTTP → IPC bridge
+│   └── api-shim.js             # Browser-side window.api polyfill (fetch)
 │
 ├── src/
 │   ├── main.jsx                # React entry point
@@ -346,22 +355,24 @@ amk-circle/
 │   │   ├── Login.jsx
 │   │   ├── Dashboard.jsx
 │   │   ├── UsersPage.jsx
-│   │   ├── super-admin/        # Super admin panel
-│   │   ├── masjid/             # Masjid module
-│   │   ├── school/             # School module
-│   │   ├── dara/               # Hifz / boarding
-│   │   ├── finance/            # Finance module
-│   │   ├── reports/            # Reports & analytics
-│   │   └── settings/           # Settings
+│   │   ├── super-admin/        # SuperDashboard, OrganizationsPage, SuperAuditLogs
+│   │   ├── masjid/             # MasjidPage (prayer, events, announcements, khutbah)
+│   │   ├── school/             # Students, Teachers, Classes, Attendance
+│   │   ├── dara/               # HifzPage, BoardingPage
+│   │   ├── finance/            # FinancePage, ExpensesPage, SalariesPage
+│   │   ├── reports/            # ReportsPage
+│   │   └── settings/           # SettingsPage
 │   └── utils/
 │       ├── pdf.js              # jsPDF receipt & report generators
 │       ├── excel.js            # SheetJS Excel export helpers
 │       └── format.js           # Date, currency, string formatters
 │
-├── public/                     # Static assets
+├── docker/nginx/nginx.conf     # Nginx reverse-proxy config
+├── public/                     # Static assets (icons, favicon)
 ├── Dockerfile                  # Multi-stage Docker build
 ├── docker-compose.yml          # API + Nginx stack
 ├── .env.example                # Environment variable template
+├── .gitattributes              # LF line endings for cross-platform
 ├── vite.config.js
 ├── tailwind.config.js
 └── package.json
@@ -371,27 +382,31 @@ amk-circle/
 
 ## Database Schema
 
-Key tables (all include `organization_id` for multi-tenancy):
+24 tables — all include `organization_id` for multi-tenancy:
 
 | Table | Purpose |
 |-------|---------|
 | `organizations` | Root tenant table — name, type, branding, subscription |
 | `users` | All users across all orgs; `organization_id` nullable for super_admin |
-| `students` | Student enrollment with auto-IDs |
-| `teachers` | Staff with employee IDs |
-| `classes` | Classroom with teacher FK and capacity |
+| `parents` | Parent / guardian records linked to students |
+| `students` | Student enrollment with auto-IDs and parent FK |
+| `teachers` | Staff with employee IDs and qualifications |
+| `classes` | Classroom with teacher FK, capacity, schedule |
+| `subjects` | Subjects per class and teacher |
 | `attendance` | Daily per-student status (UNIQUE on org+student+date) |
+| `exams` | Exam records with type, marks, and status |
+| `grades` | Student marks per exam (UNIQUE on exam+student) |
 | `quran_progress` | Surah/ayah/juz progress per student |
 | `hifz_milestones` | Memorisation milestone records |
-| `dormitories` | Dara boarding rooms |
-| `boarding_assignments` | Student ↔ room assignments |
-| `prayer_times` | 5 prayers + Iqamah per organization |
-| `events` | Community events |
-| `announcements` | Org announcements |
+| `dormitories` | Dara boarding rooms with supervisor |
+| `boarding_assignments` | Student ↔ room assignments with fee and meal plan |
+| `prayer_times` | 5 prayers + Iqamah + Jumu'ah per org (UNIQUE on org+schedule) |
+| `events` | Community events with category and visibility |
+| `announcements` | Org announcements with audience targeting |
 | `khutbah` | Jumu'ah sermon records |
-| `volunteers` | Volunteer registry |
+| `volunteers` | Volunteer registry with skills and availability |
 | `payments` | Income/tuition/donations (UNIQUE on org+receipt_number) |
-| `expenses` | Organizational expenses |
+| `expenses` | Organizational expenses with vendor and approval |
 | `salaries` | Teacher payroll (UNIQUE on org+teacher+month) |
 | `org_settings` | App settings per organization |
 | `audit_logs` | Immutable action log |
@@ -652,22 +667,23 @@ docker compose up -d
 
 ## Building for Windows
 
-### Development build test
+### Build the React frontend only
 
-```bash
-npm run build          # Vite production build
-npm run electron:build # Electron + Vite, no packaging
+```powershell
+npm run build          # Vite production build → dist/
 ```
 
-### NSIS installer (.exe)
+### Package as an installer
 
-```bash
-npm run dist
+```powershell
+npm run dist           # Windows NSIS installer (.exe)  [alias: npm run build:win]
+npm run dist:mac       # macOS DMG
+npm run dist:linux     # Linux AppImage
 ```
 
-Output: `dist-electron/AMK Circle Setup 1.0.0.exe`
+Output: `dist-electron/AMK Circle Setup 1.0.0.exe` (Windows)
 
-> **Code signing:** To sign the installer, set `WIN_CSC_LINK` (path to .pfx) and `WIN_CSC_KEY_PASSWORD` environment variables before running `npm run dist`.
+> **Code signing:** To sign the Windows installer, set `WIN_CSC_LINK` (path to your `.pfx` certificate) and `WIN_CSC_KEY_PASSWORD` environment variables before running `npm run dist`.
 
 ---
 
@@ -797,7 +813,9 @@ npm install --global windows-build-tools
 SQLite WAL mode is enabled by default. If you see `SQLITE_BUSY`:
 
 1. Make sure only one Electron instance is running
-2. Delete `amkcircle-dev.sqlite-shm` and `amkcircle-dev.sqlite-wal` temp files
+2. Delete the WAL companion files next to the database:
+   - **Electron (dev):** `amkcircle.db-shm` and `amkcircle.db-wal` in `%APPDATA%\amk-circle\`
+   - **Docker:** run `docker compose down` to close the connection cleanly
 3. Restart the app
 
 ---
