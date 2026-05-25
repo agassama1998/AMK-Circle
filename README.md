@@ -204,29 +204,47 @@ AMK Circle is a **multi-tenant** desktop ERP system built with Electron.js. A si
 ### Students
 ![Students](screenshots/06-students.png)
 
+### Parents & Guardians
+![Parents](screenshots/07-parents.png)
+
 ### Teachers
-![Teachers](screenshots/07-teachers.png)
+![Teachers](screenshots/08-teachers.png)
+
+### Classes
+![Classes](screenshots/09-classes.png)
+
+### Subjects
+![Subjects](screenshots/10-subjects.png)
+
+### Exams & Grades
+![Exams](screenshots/11-exams.png)
 
 ### Attendance
-![Attendance](screenshots/08-attendance.png)
+![Attendance](screenshots/12-attendance.png)
 
 ### Finance — Payments
-![Finance](screenshots/09-finance.png)
+![Finance](screenshots/13-finance.png)
 
 ### Finance — Expenses
-![Expenses](screenshots/10-expenses.png)
+![Expenses](screenshots/14-expenses.png)
+
+### Finance — Salaries
+![Salaries](screenshots/15-salaries.png)
 
 ### Masjid
-![Masjid](screenshots/11-masjid.png)
+![Masjid](screenshots/16-masjid.png)
 
 ### Hifz / Quran Progress
-![Hifz](screenshots/12-hifz.png)
+![Hifz](screenshots/17-hifz.png)
+
+### Boarding
+![Boarding](screenshots/18-boarding.png)
 
 ### Reports & Analytics
-![Reports](screenshots/13-reports.png)
+![Reports](screenshots/19-reports.png)
 
 ### Settings
-![Settings](screenshots/14-settings.png)
+![Settings](screenshots/20-settings.png)
 
 ---
 
