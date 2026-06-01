@@ -1,4 +1,5 @@
 const { dbGet, dbAll, dbRun, audit } = require('../database/db')
+const { denyReadOnly, getActor, getParentStudentIds, getStudentSelf, ERR_FORBIDDEN } = require('./_rbac')
 
 function gradeLetter(marks, total = 100) {
   const pct = (marks / total) * 100
@@ -16,9 +17,11 @@ function gradeLetter(marks, total = 100) {
 }
 
 module.exports = {
-  // ── Exams CRUD ────────────────────────────────────────────────────────────────
-  'exams:getAll': async (_, { orgId, classId, status } = {}) => {
+  // ── Read: exams list (parent/student may view their class exams) ──────────────
+  'exams:getAll': async (_, { orgId, classId, status, token } = {}) => {
     try {
+      // Students / parents may only see exams for their class — enforced via classId
+      // They cannot create/update/delete, just read
       let q = `SELECT e.*, c.name as class_name, s.name as subject_name,
         (SELECT COUNT(*) FROM grades g WHERE g.exam_id = e.id) as grades_entered
         FROM exams e
@@ -33,7 +36,10 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
+  // ── Write: exams CRUD (blocked for parent/student) ───────────────────────────
   'exams:create': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const result = dbRun(`
         INSERT INTO exams (organization_id, name, class_id, subject_id, exam_date,
@@ -48,6 +54,8 @@ module.exports = {
   },
 
   'exams:update': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`
         UPDATE exams SET name=?, class_id=?, subject_id=?, exam_date=?,
@@ -61,7 +69,9 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'exams:delete': async (_, { id, orgId }) => {
+  'exams:delete': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       dbRun('DELETE FROM grades WHERE exam_id=?', id)
       dbRun('DELETE FROM exams WHERE id=? AND organization_id=?', id, orgId)
@@ -70,13 +80,41 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  // ── Grades ────────────────────────────────────────────────────────────────────
-  'exams:getGrades': async (_, { examId, orgId } = {}) => {
+  // ── Read: grades (scoped for student/parent) ──────────────────────────────────
+  'exams:getGrades': async (_, { examId, orgId, token } = {}) => {
     try {
-      // Return all students in the exam's class, with their grade if entered
+      const actor = getActor(token)
       const exam = dbGet('SELECT * FROM exams WHERE id=? AND organization_id=?', examId, orgId)
       if (!exam) return { success: false, message: 'Exam not found' }
 
+      // Student: return only their own grade row
+      if (actor?.role === 'student') {
+        const self = getStudentSelf(actor.userId, orgId)
+        if (!self) return ERR_FORBIDDEN
+        const grade = dbGet(
+          `SELECT g.*, s.full_name as student_name, s.student_id as student_code
+           FROM grades g JOIN students s ON g.student_id = s.id
+           WHERE g.exam_id=? AND g.organization_id=? AND g.student_id=?`,
+          examId, orgId, self.id
+        )
+        return { success: true, data: grade ? [grade] : [], exam }
+      }
+
+      // Parent: return only linked children's grades
+      if (actor?.role === 'parent') {
+        const childIds = getParentStudentIds(actor.userId, orgId)
+        if (childIds.length === 0) return { success: true, data: [], exam }
+        const ph = childIds.map(() => '?').join(',')
+        const grades = dbAll(
+          `SELECT g.*, s.full_name as student_name, s.student_id as student_code
+           FROM grades g JOIN students s ON g.student_id = s.id
+           WHERE g.exam_id=? AND g.organization_id=? AND g.student_id IN (${ph})`,
+          [examId, orgId, ...childIds]
+        )
+        return { success: true, data: grades, exam }
+      }
+
+      // Staff: full grades list with student roster
       let students = []
       if (exam.class_id) {
         students = dbAll(
@@ -96,7 +134,6 @@ module.exports = {
       const gradeMap = {}
       grades.forEach(g => { gradeMap[g.student_id] = g })
 
-      // Merge: students list + any extra grades for students not in class list
       const merged = students.map(s => ({
         student_id: s.id, student_code: s.student_code, student_name: s.full_name,
         marks_obtained: gradeMap[s.id]?.marks_obtained ?? '',
@@ -108,7 +145,10 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'exams:bulkSaveGrades': async (_, { orgId, examId, grades }) => {
+  // ── Write: bulk save grades (blocked for parent/student) ─────────────────────
+  'exams:bulkSaveGrades': async (_, { orgId, examId, grades, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       const exam = dbGet('SELECT total_marks FROM exams WHERE id=?', examId)
       for (const g of grades) {

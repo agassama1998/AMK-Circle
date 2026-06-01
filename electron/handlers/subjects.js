@@ -1,4 +1,5 @@
 const { dbAll, dbRun, audit } = require('../database/db')
+const { denyReadOnly } = require('./_rbac')
 
 module.exports = {
   'subjects:getAll': async (_, { orgId, classId } = {}) => {
@@ -15,7 +16,10 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
+  // ── Write: blocked for parent/student ────────────────────────────────────────
   'subjects:create': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const result = dbRun(`
         INSERT INTO subjects (organization_id, name, code, description, class_id, teacher_id)
@@ -28,6 +32,8 @@ module.exports = {
   },
 
   'subjects:update': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`
         UPDATE subjects SET name=?, code=?, description=?, class_id=?, teacher_id=?
@@ -39,7 +45,9 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'subjects:delete': async (_, { id, orgId }) => {
+  'subjects:delete': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       dbRun('DELETE FROM subjects WHERE id=? AND organization_id=?', id, orgId)
       audit(orgId, null, 'admin', 'DELETE_SUBJECT', 'subjects', id, null)

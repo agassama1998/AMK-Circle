@@ -1,4 +1,5 @@
 const { dbGet, dbAll, dbRun, audit } = require('../database/db')
+const { denyReadOnly } = require('./_rbac')
 
 module.exports = {
   'classes:getAll': async (_, { orgId, status } = {}) => {
@@ -14,7 +15,10 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
+  // ── Write: blocked for parent/student ────────────────────────────────────────
   'classes:create': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const result = dbRun(`
         INSERT INTO classes (organization_id, name, grade_level, teacher_id, room, capacity, schedule, academic_year, department, status)
@@ -28,6 +32,8 @@ module.exports = {
   },
 
   'classes:update': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`
         UPDATE classes SET name=?, grade_level=?, teacher_id=?, room=?, capacity=?,
@@ -41,7 +47,9 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'classes:delete': async (_, { id, orgId }) => {
+  'classes:delete': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       const inUse = dbGet('SELECT id FROM students WHERE class_id=? AND status=?', id, 'active')
       if (inUse) return { success: false, message: 'Cannot delete class with active students. Reassign students first.' }

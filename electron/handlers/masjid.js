@@ -1,7 +1,9 @@
 const { dbGet, dbAll, dbRun, audit } = require('../database/db')
+const { denyReadOnly } = require('./_rbac')
 
 module.exports = {
   // ─── Prayer Times ──────────────────────────────────────────────────────────
+  // Read: everyone in org can view prayer times (parent/student too)
   'masjid:getPrayerTimes': async (_, { orgId } = {}) => {
     try {
       const data = dbGet('SELECT * FROM prayer_times WHERE organization_id = ? ORDER BY id DESC LIMIT 1', orgId)
@@ -9,7 +11,10 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
+  // Write: blocked for parent/student
   'masjid:updatePrayerTimes': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const existing = dbGet('SELECT id FROM prayer_times WHERE organization_id = ? AND schedule_name = ?', data.orgId, data.scheduleName || 'Default')
       if (existing) {
@@ -39,6 +44,7 @@ module.exports = {
   },
 
   // ─── Events ────────────────────────────────────────────────────────────────
+  // Read: everyone can see events / announcements
   'masjid:getEvents': async (_, { orgId, status, category } = {}) => {
     try {
       let q = 'SELECT * FROM events WHERE organization_id = ?'
@@ -50,7 +56,10 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
+  // Write: blocked for parent/student
   'masjid:createEvent': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const result = dbRun(`
         INSERT INTO events (organization_id, title, description, date, time, end_date, end_time, location, category, status, is_public)
@@ -63,6 +72,8 @@ module.exports = {
   },
 
   'masjid:updateEvent': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`UPDATE events SET title=?, description=?, date=?, time=?, end_date=?, end_time=?, location=?, category=?, status=?, is_public=? WHERE id=? AND organization_id=?`,
         data.title, data.description||null, data.date, data.time||null, data.endDate||null,
@@ -72,7 +83,9 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'masjid:deleteEvent': async (_, { id, orgId }) => {
+  'masjid:deleteEvent': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       dbRun('DELETE FROM events WHERE id=? AND organization_id=?', id, orgId)
       return { success: true }
@@ -87,6 +100,8 @@ module.exports = {
   },
 
   'masjid:createAnnouncement': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const result = dbRun(`
         INSERT INTO announcements (organization_id, title, content, type, audience, published, date, expires_at)
@@ -98,6 +113,8 @@ module.exports = {
   },
 
   'masjid:updateAnnouncement': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`UPDATE announcements SET title=?, content=?, type=?, audience=?, published=?, date=?, expires_at=? WHERE id=? AND organization_id=?`,
         data.title, data.content, data.type||'general', data.audience||'all',
@@ -106,7 +123,9 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'masjid:deleteAnnouncement': async (_, { id, orgId }) => {
+  'masjid:deleteAnnouncement': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       dbRun('DELETE FROM announcements WHERE id=? AND organization_id=?', id, orgId)
       return { success: true }
@@ -121,6 +140,8 @@ module.exports = {
   },
 
   'masjid:createKhutbah': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const result = dbRun(`
         INSERT INTO khutbah (organization_id, title, speaker, date, language, topic, description, notes)
@@ -132,6 +153,8 @@ module.exports = {
   },
 
   'masjid:updateKhutbah': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`UPDATE khutbah SET title=?, speaker=?, date=?, language=?, topic=?, description=?, notes=? WHERE id=? AND organization_id=?`,
         data.title, data.speaker||null, data.date, data.language||'English',
@@ -140,7 +163,9 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'masjid:deleteKhutbah': async (_, { id, orgId }) => {
+  'masjid:deleteKhutbah': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       dbRun('DELETE FROM khutbah WHERE id=? AND organization_id=?', id, orgId)
       return { success: true }
@@ -155,6 +180,8 @@ module.exports = {
   },
 
   'masjid:createVolunteer': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const result = dbRun(`INSERT INTO volunteers (organization_id, full_name, email, phone, skills, availability, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         data.orgId, data.fullName, data.email||null, data.phone||null, data.skills||null, data.availability||null, data.status||'active', data.notes||null)
@@ -163,6 +190,8 @@ module.exports = {
   },
 
   'masjid:updateVolunteer': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`UPDATE volunteers SET full_name=?, email=?, phone=?, skills=?, availability=?, status=?, notes=? WHERE id=? AND organization_id=?`,
         data.fullName, data.email||null, data.phone||null, data.skills||null, data.availability||null, data.status||'active', data.notes||null, data.id, data.orgId)
@@ -170,7 +199,9 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'masjid:deleteVolunteer': async (_, { id, orgId }) => {
+  'masjid:deleteVolunteer': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       dbRun('DELETE FROM volunteers WHERE id=? AND organization_id=?', id, orgId)
       return { success: true }

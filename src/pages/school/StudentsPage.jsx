@@ -1,43 +1,63 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { Plus, Search, Edit2, Trash2, Eye, Save, X, BookOpen, Users } from 'lucide-react'
+import { Plus, Search, Edit2, Eye, Save, BookOpen, Users, Activity, AlertCircle } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import PageHeader from '../../components/ui/PageHeader'
 
 const EMPTY = {
-  fullName:'', arabicName:'', dateOfBirth:'', gender:'male', nationality:'',
-  classId:'', parentName:'', parentPhone:'', parentEmail:'', address:'',
-  enrolledDate: new Date().toISOString().split('T')[0], status:'active', notes:''
+  fullName: '', arabicName: '', dateOfBirth: '', gender: 'male', nationality: '',
+  classId: '', parentName: '', parentPhone: '', parentEmail: '', address: '',
+  enrolledDate: new Date().toISOString().split('T')[0], status: 'active', notes: '',
 }
 
 const STATUS_COLOR = {
-  active:   'badge-green',
-  inactive: 'badge-gray',
-  graduated:'badge-blue',
+  active:    'badge-green',
+  inactive:  'badge-gray',
+  suspended: 'badge-red',
+  graduated: 'badge-blue',
+}
+
+// Description shown inside the confirmation modal for each target status
+const STATUS_DESCRIPTIONS = {
+  active:    'This will re-enroll the student and restore full access to classes, attendance, and exams.',
+  inactive:  'This will temporarily hide the student from active operations. Their historical data is fully preserved.',
+  suspended: 'The student will be blocked from attendance and exams. Their record is preserved and visible in reports.',
+  graduated: 'The student will be marked as graduated. Their academic record will be preserved in read-only / alumni format. Their graduation date will be set to today.',
 }
 
 export default function StudentsPage() {
-  const { orgId } = useAuth()
-  const [students, setStudents] = useState([])
-  const [classes,  setClasses]  = useState([])
-  const [search,   setSearch]   = useState('')
-  const [filterStatus,  setFilterStatus]  = useState('')
-  const [filterClass,   setFilterClass]   = useState('')
-  const [loading,  setLoading]  = useState(true)
+  const { user, orgId, canManageStatus } = useAuth()
+
+  const [students,     setStudents]     = useState([])
+  const [classes,      setClasses]      = useState([])
+  const [search,       setSearch]       = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterClass,  setFilterClass]  = useState('')
+  const [loading,      setLoading]      = useState(true)
+
+  // Add / edit
   const [showForm, setShowForm] = useState(false)
   const [editing,  setEditing]  = useState(null)
   const [form,     setForm]     = useState(EMPTY)
+  const [saving,   setSaving]   = useState(false)
+  const [msg,      setMsg]      = useState('')
+
+  // View profile
   const [viewStudent, setViewStudent] = useState(null)
   const [quranRecs,   setQuranRecs]   = useState([])
   const [showQuran,   setShowQuran]   = useState(false)
-  const [qForm,       setQForm]       = useState({ date:'', surahName:'', ayahFrom:'', ayahTo:'', juzNumber:'', pages:'', grade:'', notes:'' })
-  const [saving, setSaving] = useState(false)
-  const [msg, setMsg] = useState('')
+  const [qForm,       setQForm]       = useState({ date: '', surahName: '', ayahFrom: '', ayahTo: '', juzNumber: '', pages: '', grade: '', notes: '' })
+
+  // Status management
+  const [statusTarget, setStatusTarget] = useState(null)
+  const [newStatus,    setNewStatus]    = useState('active')
+  const [statusSaving, setStatusSaving] = useState(false)
+  const [statusMsg,    setStatusMsg]    = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
     const [sr, cr] = await Promise.all([
-      window.api.students.getAll({ orgId, search, status: filterStatus, classId: filterClass }),
+      window.api.students.getAll({ orgId, search, status: filterStatus || undefined, classId: filterClass || undefined }),
       window.api.classes.getAll({ orgId }),
     ])
     if (sr.success) setStudents(sr.data)
@@ -47,8 +67,13 @@ export default function StudentsPage() {
 
   useEffect(() => { load() }, [load])
 
+  // ── CRUD ────────────────────────────────────────────────────────────────────
   const openNew  = () => { setEditing(null); setForm(EMPTY); setShowForm(true); setMsg('') }
-  const openEdit = (s) => { setEditing(s); setForm({ ...EMPTY, ...s, classId: s.class_id || '' }); setShowForm(true); setMsg('') }
+  const openEdit = (s) => {
+    setEditing(s)
+    setForm({ ...EMPTY, ...s, classId: s.class_id || '' })
+    setShowForm(true); setMsg('')
+  }
 
   const save = async () => {
     if (!form.fullName.trim()) { setMsg('Full name is required'); return }
@@ -61,10 +86,7 @@ export default function StudentsPage() {
     if (r.success) { setShowForm(false); load() } else setMsg(r.message)
   }
 
-  const del = async (id) => {
-    if (confirm('Mark this student as inactive?')) { await window.api.students.delete({ id, orgId }); load() }
-  }
-
+  // ── View profile ─────────────────────────────────────────────────────────────
   const openView = async (s) => {
     setViewStudent(s)
     const r = await window.api.quran.getByStudent({ studentId: s.id, orgId })
@@ -77,13 +99,37 @@ export default function StudentsPage() {
     if (r.success) {
       const q = await window.api.quran.getByStudent({ studentId: viewStudent.id, orgId })
       if (q.success) setQuranRecs(q.data)
-      setQForm({ date:'', surahName:'', ayahFrom:'', ayahTo:'', juzNumber:'', pages:'', grade:'', notes:'' })
+      setQForm({ date: '', surahName: '', ayahFrom: '', ayahTo: '', juzNumber: '', pages: '', grade: '', notes: '' })
       setShowQuran(false)
     }
   }
 
+  // ── Status management ─────────────────────────────────────────────────────────
+  const openStatusModal = (s) => {
+    setStatusTarget(s)
+    setNewStatus(s.status || 'active')
+    setStatusMsg('')
+  }
+
+  const saveStatus = async () => {
+    setStatusSaving(true)
+    const r = await window.api.students.updateStatus({
+      id:         statusTarget.id,
+      orgId,
+      status:     newStatus,
+      actorRole:  user.role,
+      actorOrgId: user.orgId,
+    })
+    setStatusSaving(false)
+    if (r.success) { setStatusTarget(null); load() }
+    else setStatusMsg(r.message)
+  }
+
   const set  = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
   const setQ = k => e => setQForm(f => ({ ...f, [k]: e.target.value }))
+
+  // Rows dim if not active
+  const rowOpacity = (s) => (s.status !== 'active' ? 'opacity-70' : '')
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -98,12 +144,13 @@ export default function StudentsPage() {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input className="input pl-9" placeholder="Search name, ID, parent..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="input pl-9" placeholder="Search name, ID, parent…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <select className="input w-auto" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
           <option value="">All Statuses</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
+          <option value="suspended">Suspended</option>
           <option value="graduated">Graduated</option>
         </select>
         <select className="input w-auto" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
@@ -118,7 +165,7 @@ export default function StudentsPage() {
           <table className="data-table">
             <thead>
               <tr>
-                {['ID','Name','Gender','Class','Parent','Phone','Enrolled','Status','Actions'].map(h =>
+                {['ID', 'Name', 'Gender', 'Class', 'Parent', 'Phone', 'Enrolled', 'Status', 'Actions'].map(h =>
                   <th key={h} className="th">{h}</th>
                 )}
               </tr>
@@ -129,7 +176,7 @@ export default function StudentsPage() {
               ) : students.length === 0 ? (
                 <tr><td colSpan={9} className="td py-12 text-center text-gray-400">No students found</td></tr>
               ) : students.map(s => (
-                <tr key={s.id} className="tr">
+                <tr key={s.id} className={`tr ${rowOpacity(s)}`}>
                   <td className="td font-mono text-xs text-gray-500">{s.student_id}</td>
                   <td className="td">
                     <div className="font-semibold text-gray-900 dark:text-white">{s.full_name}</div>
@@ -147,7 +194,15 @@ export default function StudentsPage() {
                     <div className="flex gap-1">
                       <button onClick={() => openView(s)} className="btn-icon" title="View profile"><Eye size={14} /></button>
                       <button onClick={() => openEdit(s)} className="btn-icon" title="Edit"><Edit2 size={14} /></button>
-                      <button onClick={() => del(s.id)} className="btn-icon text-red-400 hover:text-red-600" title="Deactivate"><Trash2 size={14} /></button>
+                      {canManageStatus && (
+                        <button
+                          onClick={() => openStatusModal(s)}
+                          className="btn-icon text-amber-500 hover:text-amber-700"
+                          title="Change status"
+                        >
+                          <Activity size={14} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -162,7 +217,7 @@ export default function StudentsPage() {
         footer={<>
           <button onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
           <button onClick={save} disabled={saving} className="btn-primary">
-            <Save size={16} /> {saving ? 'Saving...' : 'Save Student'}
+            <Save size={16} /> {saving ? 'Saving…' : 'Save Student'}
           </button>
         </>}
       >
@@ -174,11 +229,11 @@ export default function StudentsPage() {
           </div>
           <div>
             <label className="label">Arabic Name</label>
-            <input className="input font-arabic text-right" dir="rtl" value={form.arabicName||''} onChange={set('arabicName')} />
+            <input className="input font-arabic text-right" dir="rtl" value={form.arabicName || ''} onChange={set('arabicName')} />
           </div>
           <div>
             <label className="label">Date of Birth</label>
-            <input type="date" className="input" value={form.dateOfBirth||''} onChange={set('dateOfBirth')} />
+            <input type="date" className="input" value={form.dateOfBirth || ''} onChange={set('dateOfBirth')} />
           </div>
           <div>
             <label className="label">Gender</label>
@@ -189,24 +244,25 @@ export default function StudentsPage() {
           </div>
           <div>
             <label className="label">Nationality</label>
-            <input className="input" value={form.nationality||''} onChange={set('nationality')} />
+            <input className="input" value={form.nationality || ''} onChange={set('nationality')} />
           </div>
           <div>
             <label className="label">Class</label>
-            <select className="input" value={form.classId||''} onChange={set('classId')}>
+            <select className="input" value={form.classId || ''} onChange={set('classId')}>
               <option value="">No Class</option>
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div>
             <label className="label">Enrolled Date</label>
-            <input type="date" className="input" value={form.enrolledDate||''} onChange={set('enrolledDate')} />
+            <input type="date" className="input" value={form.enrolledDate || ''} onChange={set('enrolledDate')} />
           </div>
           <div>
             <label className="label">Status</label>
             <select className="input" value={form.status} onChange={set('status')}>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+              <option value="suspended">Suspended</option>
               <option value="graduated">Graduated</option>
             </select>
           </div>
@@ -216,23 +272,23 @@ export default function StudentsPage() {
           </div>
           <div>
             <label className="label">Parent/Guardian Name</label>
-            <input className="input" value={form.parentName||''} onChange={set('parentName')} />
+            <input className="input" value={form.parentName || ''} onChange={set('parentName')} />
           </div>
           <div>
             <label className="label">Phone</label>
-            <input className="input" value={form.parentPhone||''} onChange={set('parentPhone')} />
+            <input className="input" value={form.parentPhone || ''} onChange={set('parentPhone')} />
           </div>
           <div>
             <label className="label">Email</label>
-            <input type="email" className="input" value={form.parentEmail||''} onChange={set('parentEmail')} />
+            <input type="email" className="input" value={form.parentEmail || ''} onChange={set('parentEmail')} />
           </div>
           <div>
             <label className="label">Address</label>
-            <input className="input" value={form.address||''} onChange={set('address')} />
+            <input className="input" value={form.address || ''} onChange={set('address')} />
           </div>
           <div className="sm:col-span-2">
             <label className="label">Notes</label>
-            <textarea className="input h-16 resize-none" value={form.notes||''} onChange={set('notes')} />
+            <textarea className="input h-16 resize-none" value={form.notes || ''} onChange={set('notes')} />
           </div>
         </div>
       </Modal>
@@ -242,16 +298,16 @@ export default function StudentsPage() {
         <Modal open={!!viewStudent} onClose={() => setViewStudent(null)} title={viewStudent.full_name} size="lg">
           <div className="grid grid-cols-2 gap-3 text-sm mb-5">
             {[
-              ['Student ID', viewStudent.student_id],
-              ['Class',      viewStudent.class_name || '—'],
-              ['DOB',        viewStudent.date_of_birth || '—'],
-              ['Gender',     viewStudent.gender],
-              ['Nationality',viewStudent.nationality || '—'],
-              ['Parent',     viewStudent.parent_name || '—'],
-              ['Phone',      viewStudent.parent_phone || '—'],
-              ['Email',      viewStudent.parent_email || '—'],
-              ['Enrolled',   viewStudent.enrolled_date || '—'],
-              ['Status',     viewStudent.status],
+              ['Student ID',  viewStudent.student_id],
+              ['Class',       viewStudent.class_name || '—'],
+              ['DOB',         viewStudent.date_of_birth || '—'],
+              ['Gender',      viewStudent.gender],
+              ['Nationality', viewStudent.nationality || '—'],
+              ['Parent',      viewStudent.parent_name || '—'],
+              ['Phone',       viewStudent.parent_phone || '—'],
+              ['Email',       viewStudent.parent_email || '—'],
+              ['Enrolled',    viewStudent.enrolled_date || '—'],
+              ['Status',      viewStudent.status],
             ].map(([label, val]) => (
               <div key={label} className="flex gap-2">
                 <span className="text-gray-500 text-xs w-24 flex-shrink-0">{label}:</span>
@@ -282,11 +338,12 @@ export default function StudentsPage() {
                     <label className="label">Grade</label>
                     <select className="input" value={qForm.grade} onChange={setQ('grade')}>
                       <option value="">Select</option>
-                      {['Excellent','Very Good','Good','Satisfactory','Needs Improvement'].map(g => <option key={g} value={g}>{g}</option>)}
+                      {['Excellent', 'Very Good', 'Good', 'Satisfactory', 'Needs Improvement'].map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                   </div>
-                  <div><label className="label">Type</label>
-                    <select className="input" value={qForm.type||'memorization'} onChange={setQ('type')}>
+                  <div>
+                    <label className="label">Type</label>
+                    <select className="input" value={qForm.type || 'memorization'} onChange={setQ('type')}>
                       <option value="memorization">Memorization</option>
                       <option value="revision">Revision</option>
                       <option value="tajweed">Tajweed</option>
@@ -314,6 +371,56 @@ export default function StudentsPage() {
           </div>
         </Modal>
       )}
+
+      {/* Status Management Modal */}
+      <Modal
+        open={!!statusTarget}
+        onClose={() => setStatusTarget(null)}
+        title="Change Student Status"
+        size="sm"
+        footer={<>
+          <button onClick={() => setStatusTarget(null)} className="btn-secondary">Cancel</button>
+          <button
+            onClick={saveStatus}
+            disabled={statusSaving || newStatus === (statusTarget?.status || 'active')}
+            className={`btn-primary ${newStatus === 'suspended' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : newStatus === 'graduated' ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500' : ''}`}
+          >
+            <Activity size={15} /> {statusSaving ? 'Saving…' : 'Apply Change'}
+          </button>
+        </>}
+      >
+        {statusMsg && (
+          <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2 mb-3 text-sm">
+            <AlertCircle size={14} /> {statusMsg}
+          </div>
+        )}
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+          Student: <strong className="text-gray-900 dark:text-white">{statusTarget?.full_name}</strong>
+        </p>
+        <p className="text-xs text-gray-400 mb-4">
+          Current: <span className={`badge capitalize ${STATUS_COLOR[statusTarget?.status] || 'badge-gray'}`}>{statusTarget?.status}</span>
+        </p>
+
+        <div className="mb-4">
+          <label className="label">New Status</label>
+          <select className="input" value={newStatus} onChange={e => setNewStatus(e.target.value)}>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="suspended">Suspended</option>
+            <option value="graduated">Graduated</option>
+          </select>
+        </div>
+
+        {STATUS_DESCRIPTIONS[newStatus] && (
+          <p className={`text-xs rounded-xl px-3 py-2 ${
+            newStatus === 'suspended' ? 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
+            : newStatus === 'graduated' ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
+            : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20'
+          }`}>
+            ⚠ {STATUS_DESCRIPTIONS[newStatus]}
+          </p>
+        )}
+      </Modal>
     </div>
   )
 }

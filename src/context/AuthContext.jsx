@@ -46,22 +46,35 @@ export function AuthProvider({ children }) {
     sessionStorage.setItem('amk_user', JSON.stringify(updated))
   }
 
-  const isSuperAdmin       = user?.role === 'super_admin'
-  const isOrgAdmin         = user?.role === 'organization_admin'
-  const isTeacher          = user?.role === 'teacher'
-  const isImam             = user?.role === 'imam'
-  const isFinance          = user?.role === 'finance'
-  const isPrincipal        = user?.role === 'principal'
-  const canManageOrg       = isSuperAdmin || isOrgAdmin || isPrincipal
-  const canManageFinance   = isSuperAdmin || isOrgAdmin || isFinance
-  const canManageMasjid    = isSuperAdmin || isOrgAdmin || isImam
-  const canManageStudents  = isSuperAdmin || isOrgAdmin || isTeacher || isPrincipal
+  // ─── Role flags ─────────────────────────────────────────────────────────────
+  const isSuperAdmin  = user?.role === 'super_admin'
+  const isOrgAdmin    = user?.role === 'organization_admin'
+  const isTeacher     = user?.role === 'teacher'
+  const isImam        = user?.role === 'imam'
+  const isFinance     = user?.role === 'finance'
+  const isPrincipal   = user?.role === 'principal'
+  const isParent      = user?.role === 'parent'
+  const isStudent     = user?.role === 'student'
+
+  // Read-only roles — cannot create / edit / delete anything
+  const isReadOnly    = isParent || isStudent
+
+  // ─── Capability flags ────────────────────────────────────────────────────────
+  const canManageOrg      = isSuperAdmin || isOrgAdmin || isPrincipal
+  const canManageFinance  = isSuperAdmin || isOrgAdmin || isFinance
+  const canManageMasjid   = isSuperAdmin || isOrgAdmin || isImam
+  const canManageStudents = isSuperAdmin || isOrgAdmin || isTeacher || isPrincipal
+  // Only super_admin and organization_admin may activate / deactivate / delete / restore users
+  const canManageStatus   = isSuperAdmin || isOrgAdmin
 
   return (
     <AuthContext.Provider value={{
       user, token, loading, login, logout, updateUser,
+      // Role flags
       isSuperAdmin, isOrgAdmin, isTeacher, isImam, isFinance, isPrincipal,
-      canManageOrg, canManageFinance, canManageMasjid, canManageStudents,
+      isParent, isStudent, isReadOnly,
+      // Capability flags
+      canManageOrg, canManageFinance, canManageMasjid, canManageStudents, canManageStatus,
       orgId: user?.orgId,
     }}>
       {children}

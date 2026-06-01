@@ -11,17 +11,31 @@ module.exports = {
       if (!username || !password)
         return { success: false, message: 'Username and password are required' }
 
-      // Find user (allow null organization_id for super_admin)
+      // Find user regardless of active state — status is checked explicitly below
       const user = dbGet(
         `SELECT u.*, o.name as org_name, o.slug as org_slug, o.primary_color, o.secondary_color,
-                o.logo as org_logo, o.org_type, o.is_active as org_active
+                o.logo as org_logo, o.org_type, o.is_active as org_active,
+                o.is_deleted as org_deleted
          FROM users u
          LEFT JOIN organizations o ON u.organization_id = o.id
-         WHERE u.username = ? AND u.is_active = 1`,
+         WHERE u.username = ?`,
         username
       )
 
       if (!user) return { success: false, message: 'Invalid username or password' }
+
+      // Check deletion first — deleted accounts get a distinct message
+      if (user.deleted_at)
+        return { success: false, message: 'This account has been removed. Please contact support.' }
+
+      // Check account status BEFORE verifying password so we don't leak timing info
+      // is_active is the authoritative gate; status TEXT mirrors it for display/filter
+      if (user.is_active === 0 || user.status === 'inactive')
+        return { success: false, message: 'Your account is inactive. Please contact your administrator.' }
+
+      // Check org is deleted (skip for super_admin)
+      if (user.role !== 'super_admin' && user.org_deleted === 1)
+        return { success: false, message: 'Organization is inactive or unavailable.' }
 
       // Check org is active (skip for super_admin)
       if (user.role !== 'super_admin' && user.org_active === 0)

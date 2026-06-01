@@ -8,9 +8,10 @@ module.exports = {
         (SELECT COUNT(*) FROM students s WHERE s.organization_id = o.id AND s.status = 'active') as student_count,
         (SELECT COUNT(*) FROM teachers t WHERE t.organization_id = o.id AND t.status = 'active') as teacher_count,
         (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.organization_id = o.id) as total_revenue
-        FROM organizations o`
+        FROM organizations o
+        WHERE (o.is_deleted = 0 OR o.is_deleted IS NULL)`
       const params = []
-      if (search) { q += ` WHERE o.name LIKE ? OR o.city LIKE ? OR o.org_type LIKE ?`; params.push(`%${search}%`, `%${search}%`, `%${search}%`) }
+      if (search) { q += ` AND (o.name LIKE ? OR o.city LIKE ? OR o.org_type LIKE ?)`; params.push(`%${search}%`, `%${search}%`, `%${search}%`) }
       q += ' ORDER BY o.name'
       return { success: true, data: dbAll(q, params) }
     } catch (e) { return { success: false, message: e.message } }
@@ -90,6 +91,39 @@ module.exports = {
         revenue:  payments?.total || 0,
         events:   events?.c   || 0,
       }}
+    } catch (e) { return { success: false, message: e.message } }
+  },
+
+  // Super-admin only: soft-delete an organization.
+  // Sets is_deleted=1 so the org disappears from the active list and its
+  // users can no longer log in. No data is physically removed — recoverable.
+  'orgs:delete': async (_, { id, actorId, actorRole }) => {
+    try {
+      if (actorRole !== 'super_admin')
+        return { success: false, message: 'Permission denied: only super_admin may delete organizations.' }
+
+      const org = dbGet('SELECT id, name, is_deleted FROM organizations WHERE id = ?', id)
+      if (!org) return { success: false, message: 'Organization not found' }
+      if (org.is_deleted) return { success: true } // already deleted — idempotent
+
+      dbRun(`
+        UPDATE organizations
+        SET    is_deleted = 1, is_active = 0,
+               deleted_at = CURRENT_TIMESTAMP, deleted_by = ?,
+               updated_at = CURRENT_TIMESTAMP
+        WHERE  id = ?
+      `, actorId || null, id)
+
+      // Block all active users in this org so session tokens stop working
+      dbRun(`
+        UPDATE users SET is_active = 0, status = 'inactive'
+        WHERE organization_id = ? AND is_active = 1
+      `, id)
+
+      audit(id, actorId || null, 'super_admin', 'ORGANIZATION_DELETED', 'organizations', id, {
+        name: org.name,
+      })
+      return { success: true }
     } catch (e) { return { success: false, message: e.message } }
   },
 }

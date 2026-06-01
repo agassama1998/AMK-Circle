@@ -17,7 +17,7 @@ export default function Header({ onMenuToggle }) {
   return (
     <header className="h-14 flex items-center gap-4 px-5 bg-white dark:bg-gray-900
                        border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-      <button onClick={onMenuToggle} className="btn-icon lg:hidden">
+      <button onClick={onMenuToggle} className="btn-icon">
         <Menu size={18} />
       </button>
 

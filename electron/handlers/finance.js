@@ -1,9 +1,41 @@
 const { dbGet, dbAll, dbRun, audit, nextReceiptNumber } = require('../database/db')
+const { denyReadOnly, getActor, getParentStudentIds, getStudentSelf, ERR_FORBIDDEN } = require('./_rbac')
 
 module.exports = {
   // ─── Payments ──────────────────────────────────────────────────────────────
-  'finance:getPayments': async (_, { orgId, search, type, status, startDate, endDate, studentId } = {}) => {
+
+  // Read: scoped for student/parent
+  'finance:getPayments': async (_, { orgId, search, type, status, startDate, endDate, studentId, token } = {}) => {
     try {
+      const actor = getActor(token)
+
+      // Student: only own payment records (matched by their student row)
+      if (actor?.role === 'student') {
+        const self = getStudentSelf(actor.userId, orgId)
+        if (!self) return { success: true, data: [] }
+        studentId = self.id // force scope to self
+      }
+
+      // Parent: only linked children's payments
+      if (actor?.role === 'parent') {
+        const childIds = getParentStudentIds(actor.userId, orgId)
+        if (childIds.length === 0) return { success: true, data: [] }
+        // If a specific studentId was requested, verify it's a linked child
+        if (studentId && !childIds.map(String).includes(String(studentId))) return ERR_FORBIDDEN
+        // If no specific child requested, scope to all linked children
+        if (!studentId) {
+          const ph = childIds.map(() => '?').join(',')
+          const data = dbAll(
+            `SELECT p.*, s.full_name as student_name, s.student_id as student_no
+             FROM payments p LEFT JOIN students s ON p.student_id = s.id
+             WHERE p.organization_id = ? AND p.student_id IN (${ph})
+             ORDER BY p.created_at DESC`,
+            [orgId, ...childIds]
+          )
+          return { success: true, data }
+        }
+      }
+
       let q = `SELECT p.*, s.full_name as student_name, s.student_id as student_no
                FROM payments p LEFT JOIN students s ON p.student_id = s.id
                WHERE p.organization_id = ?`
@@ -22,7 +54,10 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
+  // Write: blocked for parent/student
   'finance:createPayment': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const receiptNum = data.receiptNumber || nextReceiptNumber(data.orgId)
       const existing = dbGet('SELECT id FROM payments WHERE organization_id=? AND receipt_number=?', data.orgId, receiptNum)
@@ -44,6 +79,8 @@ module.exports = {
   },
 
   'finance:updatePayment': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`UPDATE payments SET person_name=?, person_email=?, person_phone=?, person_address=?,
         student_id=?, amount=?, payment_type=?, payment_method=?, status=?, description=?, notes=?, date=?
@@ -56,7 +93,9 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'finance:deletePayment': async (_, { id, orgId }) => {
+  'finance:deletePayment': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       dbRun('DELETE FROM payments WHERE id=? AND organization_id=?', id, orgId)
       audit(orgId, null, 'admin', 'DELETE_PAYMENT', 'payments', id, null)
@@ -64,15 +103,20 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'finance:getNextReceiptNumber': async (_, { orgId }) => {
+  'finance:getNextReceiptNumber': async (_, { orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       return { success: true, receiptNumber: nextReceiptNumber(orgId) }
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  // ─── Expenses ──────────────────────────────────────────────────────────────
-  'finance:getExpenses': async (_, { orgId, category, startDate, endDate, search } = {}) => {
+  // ─── Expenses (blocked entirely for parent/student) ────────────────────────
+
+  'finance:getExpenses': async (_, { orgId, category, startDate, endDate, search, token } = {}) => {
     try {
+      const actor = getActor(token)
+      if (actor?.role === 'parent' || actor?.role === 'student') return ERR_FORBIDDEN
       let q = 'SELECT * FROM expenses WHERE organization_id = ?'
       const p = [orgId]
       if (category)  { q += ' AND category = ?'; p.push(category) }
@@ -85,6 +129,8 @@ module.exports = {
   },
 
   'finance:createExpense': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const result = dbRun(`
         INSERT INTO expenses (organization_id, category, description, amount, date, vendor, receipt_ref, status, notes)
@@ -98,6 +144,8 @@ module.exports = {
   },
 
   'finance:updateExpense': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`UPDATE expenses SET category=?, description=?, amount=?, date=?, vendor=?, receipt_ref=?, status=?, notes=? WHERE id=? AND organization_id=?`,
         data.category, data.description, data.amount, data.date, data.vendor||null,
@@ -106,16 +154,21 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'finance:deleteExpense': async (_, { id, orgId }) => {
+  'finance:deleteExpense': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       dbRun('DELETE FROM expenses WHERE id=? AND organization_id=?', id, orgId)
       return { success: true }
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  // ─── Salaries ──────────────────────────────────────────────────────────────
-  'finance:getSalaries': async (_, { orgId, month, teacherId } = {}) => {
+  // ─── Salaries (blocked entirely for parent/student) ────────────────────────
+
+  'finance:getSalaries': async (_, { orgId, month, teacherId, token } = {}) => {
     try {
+      const actor = getActor(token)
+      if (actor?.role === 'parent' || actor?.role === 'student') return ERR_FORBIDDEN
       let q = `SELECT s.*, t.full_name as teacher_name, t.employee_id, t.specialization
                FROM salaries s JOIN teachers t ON s.teacher_id = t.id
                WHERE s.organization_id = ?`
@@ -128,6 +181,8 @@ module.exports = {
   },
 
   'finance:createSalary': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const net = (parseFloat(data.baseAmount)||0) + (parseFloat(data.allowances)||0) - (parseFloat(data.deductions)||0)
       const result = dbRun(`
@@ -140,6 +195,8 @@ module.exports = {
   },
 
   'finance:updateSalary': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const net = (parseFloat(data.baseAmount)||0) + (parseFloat(data.allowances)||0) - (parseFloat(data.deductions)||0)
       dbRun(`UPDATE salaries SET base_amount=?, allowances=?, deductions=?, net_amount=?, payment_date=?, status=?, notes=? WHERE id=? AND organization_id=?`,
@@ -148,9 +205,34 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  // ─── Financial Summary ─────────────────────────────────────────────────────
-  'finance:getSummary': async (_, { orgId, startDate, endDate } = {}) => {
+  // ─── Financial Summary (scoped for student/parent) ─────────────────────────
+
+  'finance:getSummary': async (_, { orgId, startDate, endDate, token } = {}) => {
     try {
+      const actor = getActor(token)
+      // Parents and students get a simplified view (their own payments only)
+      if (actor?.role === 'student' || actor?.role === 'parent') {
+        let childIds = []
+        if (actor.role === 'student') {
+          const self = getStudentSelf(actor.userId, orgId)
+          if (self) childIds = [self.id]
+        } else {
+          childIds = getParentStudentIds(actor.userId, orgId)
+        }
+        if (childIds.length === 0) {
+          return { success: true, data: { byType: [], expenses: [], monthly: [], totalIncome: 0, totalExpense: 0, totalSalary: 0 } }
+        }
+        const ph = childIds.map(() => '?').join(',')
+        const byType = dbAll(
+          `SELECT payment_type, SUM(amount) as total, COUNT(*) as count
+           FROM payments WHERE organization_id=? AND student_id IN (${ph}) GROUP BY payment_type`,
+          [orgId, ...childIds]
+        )
+        const totalIncome = byType.reduce((s, r) => s + (r.total||0), 0)
+        return { success: true, data: { byType, expenses: [], monthly: [], totalIncome, totalExpense: 0, totalSalary: 0 } }
+      }
+
+      // Full summary for staff
       let pQ = 'SELECT payment_type, SUM(amount) as total, COUNT(*) as count FROM payments WHERE organization_id = ?'
       const pP = [orgId]
       if (startDate) { pQ += ' AND date >= ?'; pP.push(startDate) }
@@ -165,13 +247,12 @@ module.exports = {
       eQ += ' GROUP BY category'
       const expenses = dbAll(eQ, eP)
 
-      // Monthly trend (last 6 months)
       const now = new Date()
       const monthly = []
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
         const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-        const income = dbGet('SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE organization_id=? AND date LIKE ?', orgId, `${m}%`)
+        const income  = dbGet('SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE organization_id=? AND date LIKE ?', orgId, `${m}%`)
         const expense = dbGet('SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE organization_id=? AND date LIKE ?', orgId, `${m}%`)
         monthly.push({ month: m, income: income?.t||0, expense: expense?.t||0 })
       }

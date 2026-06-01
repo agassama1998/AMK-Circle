@@ -1,4 +1,5 @@
 const { dbGet, dbAll, dbRun, audit } = require('../database/db')
+const { denyReadOnly } = require('./_rbac')
 
 module.exports = {
   'parents:getAll': async (_, { orgId, search } = {}) => {
@@ -16,7 +17,10 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
+  // ── Write: blocked for parent/student ────────────────────────────────────────
   'parents:create': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const result = dbRun(`
         INSERT INTO parents (organization_id, full_name, email, phone, alt_phone, address, occupation, relationship, notes)
@@ -30,6 +34,8 @@ module.exports = {
   },
 
   'parents:update': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`
         UPDATE parents SET full_name=?, email=?, phone=?, alt_phone=?, address=?,
@@ -43,7 +49,9 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'parents:delete': async (_, { id, orgId }) => {
+  'parents:delete': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
     try {
       const inUse = dbGet('SELECT id FROM students WHERE parent_id=?', id)
       if (inUse) return { success: false, message: 'Cannot delete — this parent is linked to a student. Unlink them first.' }

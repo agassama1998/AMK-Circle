@@ -145,6 +145,74 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Status Breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Students by status */}
+        <div className="card p-5">
+          <h3 className="section-title mb-3">Students by Status</h3>
+          <div className="space-y-2">
+            {[
+              { label: 'Active',    key: 'active',    dot: 'bg-emerald-500' },
+              { label: 'Inactive',  key: 'inactive',  dot: 'bg-gray-400' },
+              { label: 'Suspended', key: 'suspended', dot: 'bg-red-500' },
+              { label: 'Graduated', key: 'graduated', dot: 'bg-blue-500' },
+            ].map(({ label, key, dot }) => (
+              <div key={key} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+                  <span className="text-gray-600 dark:text-gray-400">{label}</span>
+                </div>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {s.studentStatus?.[key] || 0}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Teachers by status */}
+        <div className="card p-5">
+          <h3 className="section-title mb-3">Teachers by Status</h3>
+          <div className="space-y-2">
+            {[
+              { label: 'Active',   key: 'active',   dot: 'bg-emerald-500' },
+              { label: 'Inactive', key: 'inactive', dot: 'bg-gray-400' },
+            ].map(({ label, key, dot }) => (
+              <div key={key} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+                  <span className="text-gray-600 dark:text-gray-400">{label}</span>
+                </div>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {s.teacherStatus?.[key] || 0}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Users by status */}
+        <div className="card p-5">
+          <h3 className="section-title mb-3">Users by Status</h3>
+          <div className="space-y-2">
+            {[
+              { label: 'Active',   key: 'active',   dot: 'bg-emerald-500' },
+              { label: 'Inactive', key: 'inactive', dot: 'bg-gray-400' },
+            ].map(({ label, key, dot }) => (
+              <div key={key} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+                  <span className="text-gray-600 dark:text-gray-400">{label}</span>
+                </div>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {s.userStatus?.[key] || 0}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Recent students */}
       <div className="card p-5">
         <h3 className="section-title mb-4">Recently Enrolled Students</h3>

@@ -1,6 +1,15 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-const ipc = (channel, data) => ipcRenderer.invoke(channel, data)
+// Mirror the same token-injection logic that api-shim.js uses for web mode.
+// Without this, handlers calling denyReadOnly(data.token) receive token=undefined
+// and return ERR_AUTH ("Authentication required.") even when the user is logged in.
+const ipc = (channel, data) => {
+  const token = sessionStorage.getItem('amk_token')
+  const payload = (data && typeof data === 'object' && token && !data.token)
+    ? { ...data, token }
+    : data
+  return ipcRenderer.invoke(channel, payload)
+}
 
 contextBridge.exposeInMainWorld('api', {
   // ─── Auth ─────────────────────────────────────────────────────────────────
@@ -18,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
     create:       (d) => ipc('orgs:create', d),
     update:       (d) => ipc('orgs:update', d),
     toggleActive: (d) => ipc('orgs:toggleActive', d),
+    delete:       (d) => ipc('orgs:delete', d),
     getStats:     (d) => ipc('orgs:getStats', d),
   },
 
@@ -26,17 +36,20 @@ contextBridge.exposeInMainWorld('api', {
     getAll:        (d) => ipc('users:getAll', d),
     create:        (d) => ipc('users:create', d),
     update:        (d) => ipc('users:update', d),
+    updateStatus:  (d) => ipc('users:updateStatus', d),
     delete:        (d) => ipc('users:delete', d),
+    restore:       (d) => ipc('users:restore', d),
     resetPassword: (d) => ipc('users:resetPassword', d),
   },
 
   // ─── Students ─────────────────────────────────────────────────────────────
   students: {
-    getAll:   (d) => ipc('students:getAll', d),
-    getById:  (d) => ipc('students:getById', d),
-    create:   (d) => ipc('students:create', d),
-    update:   (d) => ipc('students:update', d),
-    delete:   (d) => ipc('students:delete', d),
+    getAll:        (d) => ipc('students:getAll', d),
+    getById:       (d) => ipc('students:getById', d),
+    create:        (d) => ipc('students:create', d),
+    update:        (d) => ipc('students:update', d),
+    updateStatus:  (d) => ipc('students:updateStatus', d),
+    delete:        (d) => ipc('students:delete', d),
   },
 
   // ─── Parents ──────────────────────────────────────────────────────────────
@@ -49,10 +62,11 @@ contextBridge.exposeInMainWorld('api', {
 
   // ─── Teachers ─────────────────────────────────────────────────────────────
   teachers: {
-    getAll:  (d) => ipc('teachers:getAll', d),
-    create:  (d) => ipc('teachers:create', d),
-    update:  (d) => ipc('teachers:update', d),
-    delete:  (d) => ipc('teachers:delete', d),
+    getAll:       (d) => ipc('teachers:getAll', d),
+    create:       (d) => ipc('teachers:create', d),
+    update:       (d) => ipc('teachers:update', d),
+    updateStatus: (d) => ipc('teachers:updateStatus', d),
+    delete:       (d) => ipc('teachers:delete', d),
   },
 
   // ─── Classes ──────────────────────────────────────────────────────────────

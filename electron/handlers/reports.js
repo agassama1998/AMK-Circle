@@ -40,6 +40,18 @@ module.exports = {
         GROUP BY date ORDER BY date
       `, orgId)
 
+      // ── Status breakdowns ─────────────────────────────────────────────────
+      const rawStudentStatus  = dbAll(`SELECT status, COUNT(*) as count FROM students WHERE organization_id=? GROUP BY status`, orgId)
+      const rawTeacherStatus  = dbAll(`SELECT status, COUNT(*) as count FROM teachers WHERE organization_id=? GROUP BY status`, orgId)
+      // users uses is_active as the gate; status column added by runtime migration
+      const rawUserStatus     = dbAll(`SELECT COALESCE(status,'active') as status, COUNT(*) as count FROM users WHERE organization_id=? GROUP BY status`, orgId)
+
+      const toMap = (rows) => {
+        const m = {}
+        rows.forEach(r => { m[r.status] = r.count })
+        return m
+      }
+
       return { success: true, data: {
         totalStudents:  students?.c  || 0,
         totalTeachers:  teachers?.c  || 0,
@@ -50,6 +62,9 @@ module.exports = {
         totalExpenses:  totalExpenses?.t  || 0,
         todayPresent:   todayAtt?.c || 0,
         netBalance:     (totalIncome?.t||0) - (totalExpenses?.t||0),
+        studentStatus:  toMap(rawStudentStatus),
+        teacherStatus:  toMap(rawTeacherStatus),
+        userStatus:     toMap(rawUserStatus),
         recentPayments, recentStudents,
         monthlyTrend, paymentByType, weekAtt,
       }}

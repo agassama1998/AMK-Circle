@@ -1,14 +1,18 @@
 const { dbGet, dbRun, audit } = require('../database/db')
+const { denyReadOnly } = require('./_rbac')
 
 module.exports = {
-  'settings:getOrgSettings': async (_, { orgId }) => {
+  'settings:getOrgSettings': async (_, { orgId } = {}) => {
     try {
       const settings = dbGet('SELECT * FROM org_settings WHERE organization_id = ?', orgId)
       return { success: true, data: settings || {} }
     } catch (e) { return { success: false, message: e.message } }
   },
 
+  // ── Write: blocked for parent/student ────────────────────────────────────────
   'settings:updateOrgSettings': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       const existing = dbGet('SELECT id FROM org_settings WHERE organization_id = ?', data.orgId)
       if (existing) {
@@ -32,7 +36,7 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  'settings:getOrg': async (_, { orgId }) => {
+  'settings:getOrg': async (_, { orgId } = {}) => {
     try {
       const org = dbGet('SELECT * FROM organizations WHERE id = ?', orgId)
       if (!org) return { success: false, message: 'Organization not found' }
@@ -41,6 +45,8 @@ module.exports = {
   },
 
   'settings:updateOrg': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
     try {
       dbRun(`UPDATE organizations SET name=?, org_type=?, address=?, city=?, state=?, country=?,
         email=?, phone=?, website=?, timezone=?, primary_color=?, secondary_color=?, updated_at=CURRENT_TIMESTAMP

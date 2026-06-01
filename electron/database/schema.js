@@ -528,10 +528,51 @@ module.exports = function applySchema(db) {
     CREATE INDEX IF NOT EXISTS idx_quran_student     ON quran_progress(student_id);
     CREATE INDEX IF NOT EXISTS idx_audit_org         ON audit_logs(organization_id);
     CREATE INDEX IF NOT EXISTS idx_audit_created     ON audit_logs(created_at);
-    CREATE INDEX IF NOT EXISTS idx_users_org         ON users(organization_id);
-    CREATE INDEX IF NOT EXISTS idx_hifz_student      ON hifz_milestones(student_id);
-    CREATE INDEX IF NOT EXISTS idx_expenses_org      ON expenses(organization_id);
-    CREATE INDEX IF NOT EXISTS idx_salaries_org      ON salaries(organization_id);
+    CREATE INDEX IF NOT EXISTS idx_users_org          ON users(organization_id);
+    CREATE INDEX IF NOT EXISTS idx_teachers_status    ON teachers(status);
+    CREATE INDEX IF NOT EXISTS idx_students_status2   ON students(status);
+    CREATE INDEX IF NOT EXISTS idx_hifz_student       ON hifz_milestones(student_id);
+    CREATE INDEX IF NOT EXISTS idx_expenses_org       ON expenses(organization_id);
+    CREATE INDEX IF NOT EXISTS idx_salaries_org       ON salaries(organization_id);
+  `)
+
+  // ─────────────────────────────────────────
+  // RUNTIME MIGRATIONS
+  // Safely adds columns introduced after the initial schema.
+  // SQLite ALTER TABLE only supports ADD COLUMN; wrapping in try/catch
+  // means duplicate runs on an already-migrated database are a no-op.
+  // ─────────────────────────────────────────
+  const runtimeMigrations = [
+    // 2026-05 — User lifecycle: text status column + soft-delete columns
+    `ALTER TABLE users ADD COLUMN status     TEXT DEFAULT 'active'`,
+    `ALTER TABLE users ADD COLUMN deleted_at TEXT`,
+    `ALTER TABLE users ADD COLUMN deleted_by INTEGER`,
+    // 2026-05 — Parent/Student user account linkage
+    // Allows explicit FK from a parent/student user account to their record.
+    // Falls back to email/username matching if user_id is NULL.
+    `ALTER TABLE students ADD COLUMN user_id INTEGER REFERENCES users(id)`,
+    `ALTER TABLE parents  ADD COLUMN user_id INTEGER REFERENCES users(id)`,
+    // 2026-05 — Organization soft-delete (super_admin only)
+    `ALTER TABLE organizations ADD COLUMN is_deleted  INTEGER DEFAULT 0`,
+    `ALTER TABLE organizations ADD COLUMN deleted_at  TEXT`,
+    `ALTER TABLE organizations ADD COLUMN deleted_by  INTEGER REFERENCES users(id)`,
+  ]
+  for (const sql of runtimeMigrations) {
+    try { db.exec(sql) } catch (_) { /* column already exists — skip */ }
+  }
+
+  // Create the status index only after the column migration is guaranteed to exist.
+  // (Placing it in the main index block above would fail on first-run databases
+  //  because the column doesn't exist yet at that point.)
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)`)
+  } catch (_) { /* ignore */ }
+
+  // Back-fill status from is_active for rows that pre-date this column.
+  db.exec(`
+    UPDATE users
+    SET    status = CASE WHEN is_active = 1 THEN 'active' ELSE 'inactive' END
+    WHERE  status IS NULL OR status = ''
   `)
 
   console.log('[DB] Schema applied successfully')

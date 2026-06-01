@@ -1,28 +1,54 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Building2, Users, GraduationCap, BookOpen,
   Calendar, Wallet, BarChart3, Settings, LogOut, ChevronDown,
   Landmark, Star, Heart, Shield, UserCheck, Menu, X, BookMarked,
   Bed, DollarSign, ClipboardList, Bell, Globe, Home, ClipboardCheck,
-  Library
+  Library, User, Baby
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
-// ─── Nav items config ─────────────────────────────────────────────────────────
+// ─── Nav configs ──────────────────────────────────────────────────────────────
+
 const SUPER_NAV = [
   { label: 'Platform', items: [
-    { to: '/super',              icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/super',               icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/super/organizations', icon: Building2,       label: 'Organizations' },
-    { to: '/super/audit-logs',   icon: ClipboardList,   label: 'Audit Logs' },
+    { to: '/super/audit-logs',    icon: ClipboardList,   label: 'Audit Logs' },
+  ]},
+]
+
+// Read-only nav for Student role
+const STUDENT_NAV = [
+  { label: 'My Portal', items: [
+    { to: '/student',             icon: LayoutDashboard, label: 'Dashboard', exact: true },
+    { to: '/student/attendance',  icon: ClipboardList,   label: 'Attendance' },
+    { to: '/student/grades',      icon: ClipboardCheck,  label: 'Grades & Exams' },
+    { to: '/student/hifz',        icon: BookMarked,      label: 'Quran / Hifz' },
+    { to: '/student/fees',        icon: Wallet,          label: 'Fee Summary' },
+  ]},
+  { label: 'Community', items: [
+    { to: '/student/announcements', icon: Bell,          label: 'Announcements' },
+  ]},
+]
+
+// Read-only nav for Parent role
+const PARENT_NAV = [
+  { label: 'My Children', items: [
+    { to: '/parent',              icon: LayoutDashboard, label: 'Dashboard', exact: true },
+    { to: '/parent/attendance',   icon: ClipboardList,   label: 'Attendance' },
+    { to: '/parent/grades',       icon: ClipboardCheck,  label: 'Grades & Exams' },
+    { to: '/parent/hifz',         icon: BookMarked,      label: 'Quran / Hifz' },
+    { to: '/parent/payments',     icon: Wallet,          label: 'Payments' },
+  ]},
+  { label: 'Community', items: [
+    { to: '/parent/announcements', icon: Bell,           label: 'Announcements' },
   ]},
 ]
 
 function getOrgNav(role) {
-  const isAdmin    = ['organization_admin','super_admin','principal'].includes(role)
-  const isImam     = ['imam','organization_admin','super_admin'].includes(role)
-  const isFinance  = ['finance','organization_admin','super_admin'].includes(role)
-  const isTeacher  = ['teacher','organization_admin','super_admin','principal'].includes(role)
+  const isAdmin   = ['organization_admin', 'super_admin', 'principal'].includes(role)
 
   const nav = []
 
@@ -50,8 +76,8 @@ function getOrgNav(role) {
   ]})
 
   nav.push({ label: 'Finance', items: [
-    { to: '/finance',          icon: Wallet,       label: 'Payments' },
-    { to: '/finance/expenses', icon: DollarSign,   label: 'Expenses' },
+    { to: '/finance',          icon: Wallet,        label: 'Payments' },
+    { to: '/finance/expenses', icon: DollarSign,    label: 'Expenses' },
     { to: '/finance/salaries', icon: GraduationCap, label: 'Salaries' },
   ]})
 
@@ -71,22 +97,30 @@ function getOrgNav(role) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Sidebar({ collapsed, onToggle }) {
-  const { user, isSuperAdmin, logout } = useAuth()
+  const { user, isSuperAdmin, isParent, isStudent, logout } = useAuth()
   const navigate = useNavigate()
 
-  const navGroups = isSuperAdmin ? SUPER_NAV : getOrgNav(user?.role)
+  let navGroups
+  if (isSuperAdmin)   navGroups = SUPER_NAV
+  else if (isStudent) navGroups = STUDENT_NAV
+  else if (isParent)  navGroups = PARENT_NAV
+  else                navGroups = getOrgNav(user?.role)
 
   const handleLogout = async () => {
     await logout()
     navigate('/login')
   }
 
+  // Role label for footer
+  const roleLabel = isStudent ? 'Student Portal'
+    : isParent  ? 'Parent Portal'
+    : user?.role?.replace(/_/g, ' ') || 'User'
+
   return (
-    <aside className={`
-      flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800
-      transition-all duration-300 flex-shrink-0
-      ${collapsed ? 'sidebar-w-min' : 'sidebar-w'}
-    `}>
+    <aside
+      style={{ width: collapsed ? 68 : 260, minWidth: collapsed ? 68 : 260 }}
+      className="flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 transition-all duration-300 flex-shrink-0"
+    >
       {/* Logo / Brand */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-gray-100 dark:border-gray-800">
         <div className="w-9 h-9 bg-primary-700 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -98,10 +132,21 @@ export default function Sidebar({ collapsed, onToggle }) {
             <p className="text-[10px] text-gray-400 truncate">{user?.orgName || 'Platform Admin'}</p>
           </div>
         )}
-        <button onClick={onToggle} className="ml-auto btn-icon flex-shrink-0">
-          {collapsed ? <Menu size={16} /> : <X size={16} />}
-        </button>
+        {!collapsed && (
+          <button onClick={onToggle} className="ml-auto btn-icon flex-shrink-0" title="Collapse sidebar">
+            <X size={16} />
+          </button>
+        )}
       </div>
+
+      {/* Read-only badge for parent/student */}
+      {(isParent || isStudent) && !collapsed && (
+        <div className="mx-3 mt-2 px-2 py-1 rounded-md bg-amber-50 border border-amber-200 text-center">
+          <p className="text-[10px] font-medium text-amber-700">
+            {isStudent ? '👤 Student Portal — Read Only' : '👨‍👧 Parent Portal — Read Only'}
+          </p>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
@@ -135,7 +180,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{user?.fullName}</p>
-              <p className="text-[10px] text-gray-400 capitalize truncate">{user?.role?.replace('_', ' ')}</p>
+              <p className="text-[10px] text-gray-400 capitalize truncate">{roleLabel}</p>
             </div>
           )}
           <button onClick={handleLogout} className="btn-icon flex-shrink-0" title="Logout">

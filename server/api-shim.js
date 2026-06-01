@@ -64,6 +64,7 @@
       create:       function (d) { return call('orgs:create', d) },
       update:       function (d) { return call('orgs:update', d) },
       toggleActive: function (d) { return call('orgs:toggleActive', d) },
+      delete:       function (d) { return call('orgs:delete', d) },
       getStats:     function (d) { return call('orgs:getStats', d) },
     },
 
@@ -71,16 +72,19 @@
       getAll:        function (d) { return call('users:getAll', d) },
       create:        function (d) { return call('users:create', d) },
       update:        function (d) { return call('users:update', d) },
+      updateStatus:  function (d) { return call('users:updateStatus', d) },
       delete:        function (d) { return call('users:delete', d) },
+      restore:       function (d) { return call('users:restore', d) },
       resetPassword: function (d) { return call('users:resetPassword', d) },
     },
 
     students: {
-      getAll:  function (d) { return call('students:getAll', d) },
-      getById: function (d) { return call('students:getById', d) },
-      create:  function (d) { return call('students:create', d) },
-      update:  function (d) { return call('students:update', d) },
-      delete:  function (d) { return call('students:delete', d) },
+      getAll:       function (d) { return call('students:getAll', d) },
+      getById:      function (d) { return call('students:getById', d) },
+      create:       function (d) { return call('students:create', d) },
+      update:       function (d) { return call('students:update', d) },
+      updateStatus: function (d) { return call('students:updateStatus', d) },
+      delete:       function (d) { return call('students:delete', d) },
     },
 
     parents: {
@@ -91,10 +95,11 @@
     },
 
     teachers: {
-      getAll:  function (d) { return call('teachers:getAll', d) },
-      create:  function (d) { return call('teachers:create', d) },
-      update:  function (d) { return call('teachers:update', d) },
-      delete:  function (d) { return call('teachers:delete', d) },
+      getAll:       function (d) { return call('teachers:getAll', d) },
+      create:       function (d) { return call('teachers:create', d) },
+      update:       function (d) { return call('teachers:update', d) },
+      updateStatus: function (d) { return call('teachers:updateStatus', d) },
+      delete:       function (d) { return call('teachers:delete', d) },
     },
 
     classes: {
