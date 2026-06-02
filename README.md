@@ -950,3 +950,13 @@ MIT © AMK Circle — [amkcircle.com](https://amkcircle.com)
 <div align="center">
 Built with ❤️ and Bismillah for the Ummah
 </div>
+
+
+# git add .
+# git commit -m "Complete AWS VPC EC2 RDS Terraform project"
+# git push origin feature/vpc-rds-project
+
+# git checkout main
+# git pull origin main
+# git merge feature/vpc-rds-project
+# git push origin main
