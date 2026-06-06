@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { Plus, Search, Edit2, Eye, Save, BookOpen, Users, Activity, AlertCircle } from 'lucide-react'
+import { Plus, Search, Edit2, Eye, Save, BookOpen, Users, Activity, AlertCircle, Trash2, CheckCircle } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import PageHeader from '../../components/ui/PageHeader'
 
@@ -53,6 +53,12 @@ export default function StudentsPage() {
   const [newStatus,    setNewStatus]    = useState('active')
   const [statusSaving, setStatusSaving] = useState(false)
   const [statusMsg,    setStatusMsg]    = useState('')
+
+  // Delete
+  const [deleteTarget,  setDeleteTarget]  = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteMsg,     setDeleteMsg]     = useState('')
+  const [toast,         setToast]         = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -123,6 +129,27 @@ export default function StudentsPage() {
     setStatusSaving(false)
     if (r.success) { setStatusTarget(null); load() }
     else setStatusMsg(r.message)
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────────────
+  const openDeleteModal = (s) => { setDeleteTarget(s); setDeleteMsg('') }
+
+  const confirmDelete = async () => {
+    setDeleteLoading(true)
+    const r = await window.api.students.delete({ id: deleteTarget.id, orgId })
+    setDeleteLoading(false)
+    if (r.success) {
+      setDeleteTarget(null)
+      showToast(`${deleteTarget.full_name} has been permanently deleted.`, 'success')
+      load()
+    } else {
+      setDeleteMsg(r.message || 'Deletion failed. Please try again.')
+    }
+  }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 4000)
   }
 
   const set  = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -201,6 +228,15 @@ export default function StudentsPage() {
                           title="Change status"
                         >
                           <Activity size={14} />
+                        </button>
+                      )}
+                      {canManageStatus && (
+                        <button
+                          onClick={() => openDeleteModal(s)}
+                          className="btn-icon text-red-500 hover:text-red-700"
+                          title="Delete student"
+                        >
+                          <Trash2 size={14} />
                         </button>
                       )}
                     </div>
@@ -371,6 +407,53 @@ export default function StudentsPage() {
           </div>
         </Modal>
       )}
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl text-sm font-medium animate-fade-in
+          ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+          {toast.message}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Student"
+        size="sm"
+        footer={<>
+          <button onClick={() => setDeleteTarget(null)} className="btn-secondary">Cancel</button>
+          <button
+            onClick={confirmDelete}
+            disabled={deleteLoading}
+            className="btn-primary bg-red-600 hover:bg-red-700 focus:ring-red-500"
+          >
+            <Trash2 size={15} /> {deleteLoading ? 'Deleting…' : 'Delete Permanently'}
+          </button>
+        </>}
+      >
+        {deleteMsg && (
+          <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2 mb-3 text-sm">
+            <AlertCircle size={14} /> {deleteMsg}
+          </div>
+        )}
+        <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl mb-4">
+          <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">This action cannot be undone.</p>
+            <p className="text-xs text-red-600 dark:text-red-300">
+              All attendance records, Quran progress, grades, and boarding assignments for this student will be permanently deleted.
+            </p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Are you sure you want to delete{' '}
+          <strong className="text-gray-900 dark:text-white">{deleteTarget?.full_name}</strong>
+          {deleteTarget?.student_id ? ` (${deleteTarget.student_id})` : ''}?
+        </p>
+      </Modal>
 
       {/* Status Management Modal */}
       <Modal

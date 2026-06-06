@@ -1,5 +1,5 @@
-const { dbGet, dbAll, dbRun, audit } = require('../database/db')
-const { denyReadOnly } = require('./_rbac')
+const { dbGet, dbAll, dbRun, dbTransaction, audit } = require('../database/db')
+const { denyReadOnly, getActor } = require('./_rbac')
 
 const STATUS_MANAGERS = ['super_admin', 'organization_admin']
 
@@ -97,12 +97,37 @@ module.exports = {
   },
 
   'teachers:delete': async (_, { id, orgId, token }) => {
-    const guard = denyReadOnly(token)
-    if (guard) return guard
+    const actor = getActor(token)
+    if (!actor) return { success: false, message: 'Authentication required.', code: 401 }
+
+    const DELETE_ROLES = ['super_admin', 'organization_admin']
+    if (!DELETE_ROLES.includes(actor.role))
+      return { success: false, message: 'Permission denied: only super_admin or organization_admin may delete teachers.', code: 403 }
+    if (actor.role === 'organization_admin' && String(actor.orgId) !== String(orgId))
+      return { success: false, message: 'Access denied: you may only delete teachers within your own organization.', code: 403 }
+
     try {
-      dbRun(`UPDATE teachers SET status='inactive', updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`, id, orgId)
-      audit(orgId, null, 'admin', 'DEACTIVATE_TEACHER', 'teachers', id, null)
-      return { success: true }
+      const result = dbTransaction(() => {
+        const teacher = dbGet('SELECT id, full_name, employee_id, organization_id FROM teachers WHERE id=? AND organization_id=?', id, orgId)
+        if (!teacher) return { success: false, message: 'Teacher not found' }
+
+        // Nullify FK references so dependent records are preserved
+        dbRun('UPDATE classes          SET teacher_id=NULL WHERE teacher_id=? AND organization_id=?', id, orgId)
+        dbRun('UPDATE subjects         SET teacher_id=NULL WHERE teacher_id=? AND organization_id=?', id, orgId)
+        dbRun('UPDATE quran_progress   SET teacher_id=NULL WHERE teacher_id=? AND organization_id=?', id, orgId)
+        // Remove salary records tied to this teacher
+        dbRun('DELETE FROM salaries WHERE teacher_id=? AND organization_id=?', id, orgId)
+        // Hard delete the teacher record
+        dbRun('DELETE FROM teachers WHERE id=? AND organization_id=?', id, orgId)
+
+        audit(orgId, actor.userId, actor.username, 'DELETE_TEACHER', 'teachers', id, {
+          name: teacher.full_name,
+          employee_id: teacher.employee_id,
+          deleted_by_role: actor.role,
+        })
+        return { success: true }
+      })
+      return result
     } catch (e) { return { success: false, message: e.message } }
   },
 }
