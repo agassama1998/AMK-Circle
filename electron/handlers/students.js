@@ -1,4 +1,4 @@
-const { dbGet, dbAll, dbRun, audit } = require('../database/db')
+const { dbGet, dbAll, dbRun, dbTransaction, audit } = require('../database/db')
 const {
   denyReadOnly, getActor,
   getParentStudentIds, getStudentSelf,
@@ -147,14 +147,41 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
-  // ── Delete student (WRITE — blocked for parent/student) ─────────────────────
+  // ── Delete student (super_admin or organization_admin only) ─────────────────
   'students:delete': async (_, { id, orgId, token }) => {
-    const guard = denyReadOnly(token)
-    if (guard) return guard
+    const actor = getActor(token)
+    if (!actor) return { success: false, message: 'Authentication required.', code: 401 }
+
+    const DELETE_ROLES = ['super_admin', 'organization_admin']
+    if (!DELETE_ROLES.includes(actor.role))
+      return { success: false, message: 'Permission denied: only super_admin or organization_admin may delete students.', code: 403 }
+    if (actor.role === 'organization_admin' && String(actor.orgId) !== String(orgId))
+      return { success: false, message: 'Access denied: you may only delete students within your own organization.', code: 403 }
+
     try {
-      dbRun(`UPDATE students SET status='inactive', updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`, id, orgId)
-      audit(orgId, null, 'admin', 'DEACTIVATE_STUDENT', 'students', id, null)
-      return { success: true }
+      const result = dbTransaction(() => {
+        const student = dbGet('SELECT id, full_name, student_id, organization_id FROM students WHERE id=? AND organization_id=?', id, orgId)
+        if (!student) return { success: false, message: 'Student not found' }
+
+        // Remove all dependent records first
+        dbRun('DELETE FROM attendance          WHERE student_id=? AND organization_id=?', id, orgId)
+        dbRun('DELETE FROM quran_progress      WHERE student_id=? AND organization_id=?', id, orgId)
+        dbRun('DELETE FROM grades              WHERE student_id=?', id)
+        dbRun('DELETE FROM boarding_assignments WHERE student_id=? AND organization_id=?', id, orgId)
+        dbRun('DELETE FROM hifz_milestones     WHERE student_id=? AND organization_id=?', id, orgId)
+        // Nullify student_id on payments — preserve financial audit trail
+        dbRun('UPDATE payments SET student_id=NULL WHERE student_id=? AND organization_id=?', id, orgId)
+        // Hard delete the student record
+        dbRun('DELETE FROM students WHERE id=? AND organization_id=?', id, orgId)
+
+        audit(orgId, actor.userId, actor.username, 'DELETE_STUDENT', 'students', id, {
+          name: student.full_name,
+          student_id: student.student_id,
+          deleted_by_role: actor.role,
+        })
+        return { success: true }
+      })
+      return result
     } catch (e) { return { success: false, message: e.message } }
   },
 

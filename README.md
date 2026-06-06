@@ -960,3 +960,23 @@ Built with ❤️ and Bismillah for the Ummah
 # git pull origin main
 # git merge feature/vpc-rds-project
 # git push origin main
+
+
+
+# VS Code
+   ↓
+# git add .
+   ↓
+# git commit
+   ↓
+# git push origin feature-branch
+   ↓
+# GitHub Pull Request
+   ↓
+# Review
+   ↓
+# Merge into main
+   ↓
+# GitHub Actions / CI-CD
+   ↓
+# Deploy
