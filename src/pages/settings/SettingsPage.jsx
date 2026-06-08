@@ -158,7 +158,18 @@ export default function SettingsPage() {
             <div>
               <label className="label">Currency</label>
               <select className="input" value={appForm.currency} onChange={setApp('currency')}>
-                {['USD','EUR','GBP','SAR','AED','MYR','CAD','AUD'].map(c => <option key={c} value={c}>{c}</option>)}
+                <optgroup label="Global">
+                  {['USD','EUR','GBP','SAR','AED','MYR','CAD','AUD'].map(c => <option key={c} value={c}>{c}</option>)}
+                </optgroup>
+                <optgroup label="Africa">
+                  {[
+                    'DZD','AOA','BWP','BIF','CVE','XAF','KMF','CDF','DJF',
+                    'EGP','ERN','SZL','ETB','GMD','GHS','GNF','KES','LSL',
+                    'LRD','LYD','MGA','MWK','MRU','MUR','MAD','MZN','NAD',
+                    'NGN','RWF','STN','SCR','SLE','SOS','ZAR','SSP','SDG',
+                    'TZS','TND','UGX','XOF','ZMW','ZWL'
+                  ].map(c => <option key={c} value={c}>{c}</option>)}
+                </optgroup>
               </select>
             </div>
             <div><label className="label">Currency Symbol</label><input className="input" value={appForm.currencySymbol} onChange={setApp('currencySymbol')} /></div>
