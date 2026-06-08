@@ -41,9 +41,10 @@ module.exports = {
 
       const orgId = result.lastInsertRowid
 
-      // Create default settings
-      dbRun(`INSERT OR IGNORE INTO org_settings (organization_id, receipt_prefix) VALUES (?, ?)`,
-        orgId, (data.name.slice(0, 4).toUpperCase() || 'ORG'))
+      // Create default settings (use country-derived currency if provided)
+      dbRun(`INSERT OR IGNORE INTO org_settings (organization_id, receipt_prefix, currency, currency_symbol, date_format) VALUES (?, ?, ?, ?, ?)`,
+        orgId, (data.name.slice(0, 4).toUpperCase() || 'ORG'),
+        data.currency || 'USD', data.currencySymbol || '$', data.dateFormat || 'DD/MM/YYYY')
 
       // Create default prayer times
       dbRun(`INSERT OR IGNORE INTO prayer_times (organization_id, schedule_name) VALUES (?, 'Default')`, orgId)
@@ -60,9 +61,14 @@ module.exports = {
           website=?, timezone=?, primary_color=?, secondary_color=?, subscription_status=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `, data.name, data.orgType, data.address||null, data.city||null, data.state||null,
-         data.country||'USA', data.email||null, data.phone||null, data.website||null,
-         data.timezone||'America/Chicago', data.primaryColor||'#15803d', data.secondaryColor||'#d97706',
+         data.country||null, data.email||null, data.phone||null, data.website||null,
+         data.timezone||null, data.primaryColor||'#15803d', data.secondaryColor||'#d97706',
          data.subscriptionStatus||'active', data.id)
+      // Update currency/dateFormat in org_settings if provided
+      if (data.currency || data.currencySymbol || data.dateFormat) {
+        dbRun(`UPDATE org_settings SET currency=?, currency_symbol=?, date_format=?, updated_at=CURRENT_TIMESTAMP WHERE organization_id=?`,
+          data.currency||'USD', data.currencySymbol||'$', data.dateFormat||'DD/MM/YYYY', data.id)
+      }
       audit(null, null, 'super_admin', 'UPDATE_ORG', 'organizations', data.id, { name: data.name })
       return { success: true }
     } catch (e) { return { success: false, message: e.message } }

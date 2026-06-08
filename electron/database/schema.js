@@ -740,13 +740,16 @@ module.exports = function applySchema(db) {
       ['TR','Turkey','+90','Europe/Istanbul','TRY','DD/MM/YYYY'],
       ['ID','Indonesia','+62','Asia/Jakarta','IDR','DD/MM/YYYY'],
       ['BD','Bangladesh','+880','Asia/Dhaka','BDT','DD/MM/YYYY'],
+      ['QA','Qatar','+974','Asia/Qatar','QAR','DD/MM/YYYY'],
+      ['KW','Kuwait','+965','Asia/Kuwait','KWD','DD/MM/YYYY'],
     ]
     for (const c of COUNTRIES) ci.run(...c)
 
     const curi = db.prepare(`INSERT OR IGNORE INTO currencies (currency_code, currency_name, currency_symbol) VALUES (?, ?, ?)`)
     const CURRENCIES = [
       ['USD','US Dollar','$'],['EUR','Euro','€'],['GBP','British Pound','£'],
-      ['SAR','Saudi Riyal','﷼'],['AED','UAE Dirham','د.إ'],['MYR','Malaysian Ringgit','RM'],
+      ['SAR','Saudi Riyal','﷼'],['AED','UAE Dirham','د.إ'],['QAR','Qatari Riyal','﷼'],
+      ['KWD','Kuwaiti Dinar','د.ك'],['MYR','Malaysian Ringgit','RM'],
       ['CAD','Canadian Dollar','CA$'],['AUD','Australian Dollar','A$'],
       ['GMD','Gambian Dalasi','D'],['GHS','Ghanaian Cedi','₵'],['NGN','Nigerian Naira','₦'],
       ['XOF','West African CFA Franc','CFA'],['XAF','Central African CFA Franc','FCFA'],

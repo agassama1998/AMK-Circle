@@ -161,6 +161,8 @@ async function seedDatabase(database) {
     ['TR','Turkey','+90','Europe/Istanbul','TRY','DD/MM/YYYY'],
     ['ID','Indonesia','+62','Asia/Jakarta','IDR','DD/MM/YYYY'],
     ['BD','Bangladesh','+880','Asia/Dhaka','BDT','DD/MM/YYYY'],
+    ['QA','Qatar','+974','Asia/Qatar','QAR','DD/MM/YYYY'],
+    ['KW','Kuwait','+965','Asia/Kuwait','KWD','DD/MM/YYYY'],
   ]
   for (const c of COUNTRIES) countryInsert.run(...c)
 
@@ -175,6 +177,8 @@ async function seedDatabase(database) {
     ['GBP','British Pound','£'],
     ['SAR','Saudi Riyal','﷼'],
     ['AED','UAE Dirham','د.إ'],
+    ['QAR','Qatari Riyal','﷼'],
+    ['KWD','Kuwaiti Dinar','د.ك'],
     ['MYR','Malaysian Ringgit','RM'],
     ['CAD','Canadian Dollar','CA$'],
     ['AUD','Australian Dollar','A$'],
