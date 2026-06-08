@@ -177,17 +177,24 @@
     },
 
     dara: {
-      getHifzProgress:  function (d) { return call('dara:getHifzProgress', d) },
-      getMilestones:    function (d) { return call('dara:getMilestones', d) },
-      addMilestone:     function (d) { return call('dara:addMilestone', d) },
-      updateMilestone:  function (d) { return call('dara:updateMilestone', d) },
-      deleteMilestone:  function (d) { return call('dara:deleteMilestone', d) },
-      getDormitories:   function (d) { return call('dara:getDormitories', d) },
-      createDormitory:  function (d) { return call('dara:createDormitory', d) },
-      updateDormitory:  function (d) { return call('dara:updateDormitory', d) },
-      getAssignments:   function (d) { return call('dara:getAssignments', d) },
-      assignBoarding:   function (d) { return call('dara:assignBoarding', d) },
-      updateAssignment: function (d) { return call('dara:updateAssignment', d) },
+      getHifzProgress:        function (d) { return call('dara:getHifzProgress', d) },
+      getMilestones:          function (d) { return call('dara:getMilestones', d) },
+      addMilestone:           function (d) { return call('dara:addMilestone', d) },
+      updateMilestone:        function (d) { return call('dara:updateMilestone', d) },
+      deleteMilestone:        function (d) { return call('dara:deleteMilestone', d) },
+      getDormitories:         function (d) { return call('dara:getDormitories', d) },
+      createDormitory:        function (d) { return call('dara:createDormitory', d) },
+      updateDormitory:        function (d) { return call('dara:updateDormitory', d) },
+      getAssignments:         function (d) { return call('dara:getAssignments', d) },
+      assignBoarding:         function (d) { return call('dara:assignBoarding', d) },
+      updateAssignment:       function (d) { return call('dara:updateAssignment', d) },
+      getDisciplineRecords:   function (d) { return call('dara:getDisciplineRecords', d) },
+      createDisciplineRecord: function (d) { return call('dara:createDisciplineRecord', d) },
+      updateDisciplineRecord: function (d) { return call('dara:updateDisciplineRecord', d) },
+      deleteDisciplineRecord: function (d) { return call('dara:deleteDisciplineRecord', d) },
+      getFeedingRecords:      function (d) { return call('dara:getFeedingRecords', d) },
+      saveFeedingRecord:      function (d) { return call('dara:saveFeedingRecord', d) },
+      deleteFeedingRecord:    function (d) { return call('dara:deleteFeedingRecord', d) },
     },
 
     reports: {
@@ -201,10 +208,28 @@
     },
 
     settings: {
-      getOrgSettings:    function (d) { return call('settings:getOrgSettings', d) },
-      updateOrgSettings: function (d) { return call('settings:updateOrgSettings', d) },
-      getOrg:            function (d) { return call('settings:getOrg', d) },
-      updateOrg:         function (d) { return call('settings:updateOrg', d) },
+      getOrgSettings:     function (d) { return call('settings:getOrgSettings', d) },
+      updateOrgSettings:  function (d) { return call('settings:updateOrgSettings', d) },
+      getOrg:             function (d) { return call('settings:getOrg', d) },
+      updateOrg:          function (d) { return call('settings:updateOrg', d) },
+      getCountryDefaults: function (d) { return call('settings:getCountryDefaults', d) },
+    },
+
+    countries: {
+      getAll:    function ()  { return call('countries:getAll', {}) },
+      getByCode: function (d) { return call('countries:getByCode', d) },
+    },
+
+    currencies: {
+      getAll:    function ()  { return call('currencies:getAll', {}) },
+      getByCode: function (d) { return call('currencies:getByCode', d) },
+    },
+
+    timetable: {
+      getAll:  function (d) { return call('timetable:getAll', d) },
+      create:  function (d) { return call('timetable:create', d) },
+      update:  function (d) { return call('timetable:update', d) },
+      delete:  function (d) { return call('timetable:delete', d) },
     },
 
     // ── Electron-only features → graceful stubs in web mode ─────────────────

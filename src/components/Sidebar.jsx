@@ -5,7 +5,7 @@ import {
   Calendar, Wallet, BarChart3, Settings, LogOut, ChevronDown,
   Landmark, Star, Heart, Shield, UserCheck, Menu, X, BookMarked,
   Bed, DollarSign, ClipboardList, Bell, Globe, Home, ClipboardCheck,
-  Library, User, Baby
+  Library, User, Baby, Clock, FileText, ShieldAlert, Utensils
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -65,14 +65,17 @@ function getOrgNav(role) {
     { to: '/school/parents',    icon: Heart,          label: 'Parents' },
     { to: '/school/teachers',   icon: UserCheck,      label: 'Teachers' },
     { to: '/school/classes',    icon: BookOpen,       label: 'Classes' },
-    { to: '/school/subjects',   icon: Library,        label: 'Subjects' },
-    { to: '/school/exams',      icon: ClipboardCheck, label: 'Exams & Grades' },
-    { to: '/school/attendance', icon: ClipboardList,  label: 'Attendance' },
+    { to: '/school/subjects',     icon: Library,        label: 'Subjects' },
+    { to: '/school/exams',        icon: ClipboardCheck, label: 'Exams & Grades' },
+    { to: '/school/report-cards', icon: FileText,       label: 'Report Cards' },
+    { to: '/school/timetable',    icon: Clock,          label: 'Timetable' },
+    { to: '/school/attendance',   icon: ClipboardList,  label: 'Attendance' },
   ]})
 
   nav.push({ label: 'Dara / Hifz', items: [
-    { to: '/dara/hifz',    icon: BookMarked, label: 'Hifz Tracking' },
-    { to: '/dara/boarding', icon: Bed,        label: 'Boarding' },
+    { to: '/dara/hifz',       icon: BookMarked,  label: 'Hifz Tracking' },
+    { to: '/dara/boarding',   icon: Bed,         label: 'Boarding' },
+    { to: '/dara/discipline', icon: ShieldAlert, label: 'Discipline' },
   ]})
 
   nav.push({ label: 'Finance', items: [

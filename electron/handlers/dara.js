@@ -211,4 +211,108 @@ module.exports = {
       return { success: true }
     } catch (e) { return { success: false, message: e.message } }
   },
+
+  // ─── Discipline Records ────────────────────────────────────────────────────
+  'dara:getDisciplineRecords': async (_, { orgId, studentId, severity, resolved, token } = {}) => {
+    try {
+      const actor = getActor(token)
+      if (actor?.role === 'parent' || actor?.role === 'student') return ERR_FORBIDDEN
+      let q = `SELECT dr.*, s.full_name as student_name, s.student_id as student_no,
+                      c.name as class_name, u.full_name as reporter_name
+               FROM discipline_records dr
+               JOIN students s ON dr.student_id = s.id
+               LEFT JOIN classes c ON s.class_id = c.id
+               LEFT JOIN users u ON dr.reported_by = u.id
+               WHERE dr.organization_id = ?`
+      const p = [orgId]
+      if (studentId !== undefined && studentId !== null && studentId !== '') { q += ' AND dr.student_id = ?'; p.push(studentId) }
+      if (severity)  { q += ' AND dr.severity = ?';          p.push(severity) }
+      if (resolved !== undefined && resolved !== '') { q += ' AND dr.resolved = ?'; p.push(resolved ? 1 : 0) }
+      q += ' ORDER BY dr.incident_date DESC'
+      return { success: true, data: dbAll(q, p) }
+    } catch (e) { return { success: false, message: e.message } }
+  },
+
+  'dara:createDisciplineRecord': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
+    try {
+      const result = dbRun(`
+        INSERT INTO discipline_records (organization_id, student_id, incident_date, incident_type,
+          severity, description, action_taken, reported_by, resolved, parent_notified, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, data.orgId, data.studentId, data.incidentDate, data.incidentType||'misconduct',
+         data.severity||'minor', data.description, data.actionTaken||null,
+         data.reportedBy||null, data.resolved ? 1 : 0, data.parentNotified ? 1 : 0, data.notes||null)
+      audit(data.orgId, null, 'staff', 'CREATE_DISCIPLINE_RECORD', 'discipline_records', result.lastInsertRowid, { studentId: data.studentId, type: data.incidentType })
+      return { success: true, id: result.lastInsertRowid }
+    } catch (e) { return { success: false, message: e.message } }
+  },
+
+  'dara:updateDisciplineRecord': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
+    try {
+      dbRun(`UPDATE discipline_records SET incident_date=?, incident_type=?, severity=?, description=?,
+              action_taken=?, resolved=?, resolved_date=?, parent_notified=?, notes=?
+             WHERE id=? AND organization_id=?`,
+        data.incidentDate, data.incidentType||'misconduct', data.severity||'minor',
+        data.description, data.actionTaken||null, data.resolved ? 1 : 0,
+        data.resolvedDate||null, data.parentNotified ? 1 : 0, data.notes||null,
+        data.id, data.orgId)
+      return { success: true }
+    } catch (e) { return { success: false, message: e.message } }
+  },
+
+  'dara:deleteDisciplineRecord': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
+    try {
+      dbRun('DELETE FROM discipline_records WHERE id=? AND organization_id=?', id, orgId)
+      return { success: true }
+    } catch (e) { return { success: false, message: e.message } }
+  },
+
+  // ─── Feeding Management ────────────────────────────────────────────────────
+  'dara:getFeedingRecords': async (_, { orgId, dormitoryId, startDate, endDate, token } = {}) => {
+    try {
+      const actor = getActor(token)
+      if (actor?.role === 'parent' || actor?.role === 'student') return ERR_FORBIDDEN
+      let q = `SELECT fr.*, d.name as dormitory_name, u.full_name as recorder_name
+               FROM feeding_records fr
+               LEFT JOIN dormitories d ON fr.dormitory_id = d.id
+               LEFT JOIN users u ON fr.recorded_by = u.id
+               WHERE fr.organization_id = ?`
+      const p = [orgId]
+      if (dormitoryId) { q += ' AND fr.dormitory_id = ?'; p.push(dormitoryId) }
+      if (startDate)   { q += ' AND fr.date >= ?';        p.push(startDate) }
+      if (endDate)     { q += ' AND fr.date <= ?';        p.push(endDate) }
+      q += ' ORDER BY fr.date DESC, fr.meal_type'
+      return { success: true, data: dbAll(q, p) }
+    } catch (e) { return { success: false, message: e.message } }
+  },
+
+  'dara:saveFeedingRecord': async (_, data) => {
+    const guard = denyReadOnly(data.token)
+    if (guard) return guard
+    try {
+      dbRun(`
+        INSERT INTO feeding_records (organization_id, dormitory_id, date, meal_type, student_count, menu, cost, notes, recorded_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(organization_id, dormitory_id, date, meal_type)
+        DO UPDATE SET student_count=excluded.student_count, menu=excluded.menu, cost=excluded.cost, notes=excluded.notes
+      `, data.orgId, data.dormitoryId||null, data.date, data.mealType||'breakfast',
+         data.studentCount||0, data.menu||null, data.cost||0, data.notes||null, data.recordedBy||null)
+      return { success: true }
+    } catch (e) { return { success: false, message: e.message } }
+  },
+
+  'dara:deleteFeedingRecord': async (_, { id, orgId, token }) => {
+    const guard = denyReadOnly(token)
+    if (guard) return guard
+    try {
+      dbRun('DELETE FROM feeding_records WHERE id=? AND organization_id=?', id, orgId)
+      return { success: true }
+    } catch (e) { return { success: false, message: e.message } }
+  },
 }

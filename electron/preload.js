@@ -150,19 +150,26 @@ contextBridge.exposeInMainWorld('api', {
     getNextReceiptNumber: (d) => ipc('finance:getNextReceiptNumber', d),
   },
 
-  // ─── Dara (Hifz & Boarding) ───────────────────────────────────────────────
+  // ─── Dara (Hifz, Boarding, Discipline, Feeding) ───────────────────────────
   dara: {
-    getHifzProgress:      (d) => ipc('dara:getHifzProgress', d),
-    getMilestones:        (d) => ipc('dara:getMilestones', d),
-    addMilestone:         (d) => ipc('dara:addMilestone', d),
-    updateMilestone:      (d) => ipc('dara:updateMilestone', d),
-    deleteMilestone:      (d) => ipc('dara:deleteMilestone', d),
-    getDormitories:       (d) => ipc('dara:getDormitories', d),
-    createDormitory:      (d) => ipc('dara:createDormitory', d),
-    updateDormitory:      (d) => ipc('dara:updateDormitory', d),
-    getAssignments:       (d) => ipc('dara:getAssignments', d),
-    assignBoarding:       (d) => ipc('dara:assignBoarding', d),
-    updateAssignment:     (d) => ipc('dara:updateAssignment', d),
+    getHifzProgress:          (d) => ipc('dara:getHifzProgress', d),
+    getMilestones:            (d) => ipc('dara:getMilestones', d),
+    addMilestone:             (d) => ipc('dara:addMilestone', d),
+    updateMilestone:          (d) => ipc('dara:updateMilestone', d),
+    deleteMilestone:          (d) => ipc('dara:deleteMilestone', d),
+    getDormitories:           (d) => ipc('dara:getDormitories', d),
+    createDormitory:          (d) => ipc('dara:createDormitory', d),
+    updateDormitory:          (d) => ipc('dara:updateDormitory', d),
+    getAssignments:           (d) => ipc('dara:getAssignments', d),
+    assignBoarding:           (d) => ipc('dara:assignBoarding', d),
+    updateAssignment:         (d) => ipc('dara:updateAssignment', d),
+    getDisciplineRecords:     (d) => ipc('dara:getDisciplineRecords', d),
+    createDisciplineRecord:   (d) => ipc('dara:createDisciplineRecord', d),
+    updateDisciplineRecord:   (d) => ipc('dara:updateDisciplineRecord', d),
+    deleteDisciplineRecord:   (d) => ipc('dara:deleteDisciplineRecord', d),
+    getFeedingRecords:        (d) => ipc('dara:getFeedingRecords', d),
+    saveFeedingRecord:        (d) => ipc('dara:saveFeedingRecord', d),
+    deleteFeedingRecord:      (d) => ipc('dara:deleteFeedingRecord', d),
   },
 
   // ─── Reports ──────────────────────────────────────────────────────────────
@@ -178,10 +185,29 @@ contextBridge.exposeInMainWorld('api', {
 
   // ─── Settings ─────────────────────────────────────────────────────────────
   settings: {
-    getOrgSettings:    (d) => ipc('settings:getOrgSettings', d),
-    updateOrgSettings: (d) => ipc('settings:updateOrgSettings', d),
-    getOrg:            (d) => ipc('settings:getOrg', d),
-    updateOrg:         (d) => ipc('settings:updateOrg', d),
+    getOrgSettings:       (d) => ipc('settings:getOrgSettings', d),
+    updateOrgSettings:    (d) => ipc('settings:updateOrgSettings', d),
+    getOrg:               (d) => ipc('settings:getOrg', d),
+    updateOrg:            (d) => ipc('settings:updateOrg', d),
+    getCountryDefaults:   (d) => ipc('settings:getCountryDefaults', d),
+  },
+
+  // ─── Countries & Currencies ───────────────────────────────────────────────
+  countries: {
+    getAll:      ()  => ipc('countries:getAll'),
+    getByCode:   (d) => ipc('countries:getByCode', d),
+  },
+  currencies: {
+    getAll:      ()  => ipc('currencies:getAll'),
+    getByCode:   (d) => ipc('currencies:getByCode', d),
+  },
+
+  // ─── Timetable ────────────────────────────────────────────────────────────
+  timetable: {
+    getAll:  (d) => ipc('timetable:getAll', d),
+    create:  (d) => ipc('timetable:create', d),
+    update:  (d) => ipc('timetable:update', d),
+    delete:  (d) => ipc('timetable:delete', d),
   },
 
   // ─── System ───────────────────────────────────────────────────────────────
