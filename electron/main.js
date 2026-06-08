@@ -72,6 +72,8 @@ function registerIpcHandlers() {
     './handlers/dara',
     './handlers/reports',
     './handlers/settings',
+    './handlers/countries',
+    './handlers/timetable',
   ]
 
   for (const mod of handlerModules) {

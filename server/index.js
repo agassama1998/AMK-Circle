@@ -55,6 +55,8 @@ function serveIndex (_, res) {
     '../electron/handlers/dara',
     '../electron/handlers/reports',
     '../electron/handlers/settings',
+    '../electron/handlers/countries',
+    '../electron/handlers/timetable',
   ]
   const handlers = {}
   for (const f of handlerFiles) Object.assign(handlers, require(f))

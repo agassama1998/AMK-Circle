@@ -912,20 +912,28 @@ The receipt is saved directly via `jsPDF`'s `doc.save()`. On Windows, files go t
 ## Roadmap
 
 ### 🔨 Recently Shipped
+- [x] **Countries & Currencies tables** — 60+ countries, 55+ currencies with full seeding; auto-assign currency, timezone, and date format when country is selected
+- [x] **Country-smart Settings** — prompt "Update currency to match selected country?" with one-click apply
+- [x] **Timetable** — weekly class/subject/teacher schedule with grid and list views, per-class and per-day filtering
+- [x] **Report Cards** — per-class student report cards with PDF export, grade summaries, and expand-to-view
+- [x] **Discipline Records** — track student incidents (type, severity, action taken, resolved, parent notified), quick-resolve action
+- [x] **Feeding Management** — log daily boarding meals (breakfast/lunch/dinner) per dormitory with count, menu, and cost
 - [x] **Exams & Grades** — schedule exams, enter marks, auto letter grades (A+→F), pass/fail
 - [x] **Subjects** — subject management per class and teacher
 - [x] **Parents module** — dedicated parent/guardian profiles linked to students
+- [x] **PM2 Ecosystem config** — `pm2.ecosystem.config.js` for production server deployment
 
 ### 🗺️ Planned
-- [ ] **Cloud sync** — optional PostgreSQL backend via Express.js REST API
+- [ ] **Cloud sync** — PostgreSQL backend via Express.js REST API (server already scaffolded)
 - [ ] **Mobile companion** — React Native app for parents (attendance, grades)
 - [ ] **Arabic RTL UI** — full right-to-left layout toggle
 - [ ] **Multi-language** — i18next integration (Arabic, Urdu, Malay, French)
 - [ ] **Email notifications** — SMTP integration for payment receipts
 - [ ] **Fingerprint/biometric attendance** — hardware integration
-- [ ] **Payment gateway** — Stripe / PayPal integration
+- [ ] **Payment gateway** — Stripe / PayPal / M-Pesa integration
 - [ ] **Quran recitation tracking** — audio upload per lesson
-- [ ] **Parent portal** — web app for parent access without installing Electron
+- [ ] **Certificates** — printable completion certificates for Hifz, graduation
+- [ ] **Tajweed Assessment** — structured evaluation form per student per session
 
 ---
 

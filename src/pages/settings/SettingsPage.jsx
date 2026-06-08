@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { Save, Settings, Building2, Key, Database, Shield } from 'lucide-react'
+import { Save, Settings, Building2, Key, Database, Shield, Globe } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 
 const TABS = [
@@ -15,11 +15,24 @@ export default function SettingsPage() {
   const [tab, setTab] = useState(0)
 
   // Org settings
-  const [orgForm, setOrgForm] = useState({ name:'', orgType:'Islamic Community Center', address:'', city:'', state:'', country:'USA', email:'', phone:'', website:'', timezone:'America/Chicago', primaryColor:'#15803d', secondaryColor:'#d97706' })
+  const [orgForm, setOrgForm] = useState({ name:'', orgType:'Islamic Community Center', address:'', city:'', state:'', country:'US', email:'', phone:'', website:'', timezone:'America/Chicago', primaryColor:'#15803d', secondaryColor:'#d97706' })
   const [appForm, setAppForm] = useState({ academicYear:'', currency:'USD', currencySymbol:'$', dateFormat:'MM/DD/YYYY', autoReceipt:true, receiptPrefix:'RCP' })
   const [pwForm,  setPwForm]  = useState({ current:'', newPass:'', confirm:'' })
-  const [msg, setMsg] = useState({ tab: -1, text: '', type: 'success' })
-  const [saving, setSaving] = useState(false)
+  const [msg,     setMsg]     = useState({ tab: -1, text: '', type: 'success' })
+  const [saving,  setSaving]  = useState(false)
+
+  // Reference data
+  const [countries,   setCountries]   = useState([])
+  const [currencies,  setCurrencies]  = useState([])
+  // Prompt: "Update currency to match new country?"
+  const [currPrompt, setCurrPrompt] = useState(null) // { currency, symbol, dateFormat, timezone }
+
+  useEffect(() => {
+    Promise.all([window.api.countries.getAll(), window.api.currencies.getAll()]).then(([cr, cur]) => {
+      if (cr.success)  setCountries(cr.data)
+      if (cur.success) setCurrencies(cur.data)
+    })
+  }, [])
 
   useEffect(() => {
     if (!orgId) return
@@ -28,13 +41,35 @@ export default function SettingsPage() {
       window.api.settings.getOrgSettings({ orgId }),
     ]).then(([or, sr]) => {
       if (or.success && or.data) {
-        setOrgForm({ name:or.data.name||'', orgType:or.data.org_type||'', address:or.data.address||'', city:or.data.city||'', state:or.data.state||'', country:or.data.country||'USA', email:or.data.email||'', phone:or.data.phone||'', website:or.data.website||'', timezone:or.data.timezone||'America/Chicago', primaryColor:or.data.primary_color||'#15803d', secondaryColor:or.data.secondary_color||'#d97706' })
+        setOrgForm({ name:or.data.name||'', orgType:or.data.org_type||'', address:or.data.address||'', city:or.data.city||'', state:or.data.state||'', country:or.data.country||'US', email:or.data.email||'', phone:or.data.phone||'', website:or.data.website||'', timezone:or.data.timezone||'America/Chicago', primaryColor:or.data.primary_color||'#15803d', secondaryColor:or.data.secondary_color||'#d97706' })
       }
       if (sr.success && sr.data) {
         setAppForm({ academicYear:sr.data.academic_year||'', currency:sr.data.currency||'USD', currencySymbol:sr.data.currency_symbol||'$', dateFormat:sr.data.date_format||'MM/DD/YYYY', autoReceipt:!!sr.data.auto_receipt, receiptPrefix:sr.data.receipt_prefix||'RCP' })
       }
     })
   }, [orgId])
+
+  // When country changes: auto-assign timezone, then prompt for currency + date format
+  const handleCountryChange = async (e) => {
+    const code = e.target.value
+    setOrgForm(f => ({ ...f, country: code }))
+    if (!code) return
+    const r = await window.api.settings.getCountryDefaults({ countryCode: code })
+    if (!r.success || !r.data) return
+    const d = r.data
+    // Always auto-apply timezone
+    setOrgForm(f => ({ ...f, timezone: d.timezone || f.timezone }))
+    // Prompt for currency + date format
+    if (d.default_currency) {
+      setCurrPrompt({ currency: d.default_currency, symbol: d.currency_symbol || '', dateFormat: d.date_format || 'DD/MM/YYYY' })
+    }
+  }
+
+  const applyCurrencyDefaults = () => {
+    if (!currPrompt) return
+    setAppForm(f => ({ ...f, currency: currPrompt.currency, currencySymbol: currPrompt.symbol, dateFormat: currPrompt.dateFormat }))
+    setCurrPrompt(null)
+  }
 
   const notify = (tabIdx, text, type='success') => {
     setMsg({ tab: tabIdx, text, type })
@@ -117,12 +152,18 @@ export default function SettingsPage() {
             <div><label className="label">Website</label><input className="input" value={orgForm.website} onChange={setOrg('website')} /></div>
             <div><label className="label">Address</label><input className="input" value={orgForm.address} onChange={setOrg('address')} /></div>
             <div><label className="label">City</label><input className="input" value={orgForm.city} onChange={setOrg('city')} /></div>
-            <div><label className="label">State</label><input className="input" value={orgForm.state} onChange={setOrg('state')} /></div>
-            <div><label className="label">Country</label><input className="input" value={orgForm.country} onChange={setOrg('country')} /></div>
+            <div><label className="label">State / Province</label><input className="input" value={orgForm.state} onChange={setOrg('state')} /></div>
+            <div>
+              <label className="label">Country</label>
+              <select className="input" value={orgForm.country} onChange={handleCountryChange}>
+                <option value="">— Select Country —</option>
+                {countries.map(c => <option key={c.country_code} value={c.country_code}>{c.country_name}</option>)}
+              </select>
+            </div>
             <div>
               <label className="label">Timezone</label>
               <select className="input" value={orgForm.timezone} onChange={setOrg('timezone')}>
-                {['America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Toronto','Europe/London','Asia/Riyadh','Asia/Dubai'].map(t =>
+                {[...new Set(['America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Toronto','Europe/London','Asia/Riyadh','Asia/Dubai', ...countries.map(c => c.timezone).filter(Boolean)])].sort().map(t =>
                   <option key={t} value={t}>{t}</option>
                 )}
               </select>
@@ -153,26 +194,36 @@ export default function SettingsPage() {
         <div className="card p-6 space-y-5 max-w-xl">
           <h3 className="section-title">Application Settings</h3>
           <Alert tabIdx={1} text={msg.text} type={msg.type} />
+
+          {/* Country-currency prompt */}
+          {currPrompt && (
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-start gap-3">
+              <Globe size={18} className="text-amber-600 mt-0.5 flex-shrink-0"/>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Update currency defaults?</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                  The selected country uses <strong>{currPrompt.currency}</strong> ({currPrompt.symbol}) with date format <strong>{currPrompt.dateFormat}</strong>.
+                </p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <button onClick={applyCurrencyDefaults} className="text-xs px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700">Apply</button>
+                <button onClick={() => setCurrPrompt(null)} className="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-amber-200 text-amber-700 hover:bg-amber-50">Keep current</button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div><label className="label">Academic Year</label><input className="input" value={appForm.academicYear} onChange={setApp('academicYear')} placeholder="2024-2025" /></div>
             <div>
               <label className="label">Currency</label>
               <select className="input" value={appForm.currency} onChange={setApp('currency')}>
-                <optgroup label="Global">
-                  {['USD','EUR','GBP','SAR','AED','MYR','CAD','AUD'].map(c => <option key={c} value={c}>{c}</option>)}
-                </optgroup>
-                <optgroup label="Africa">
-                  {[
-                    'DZD','AOA','BWP','BIF','CVE','XAF','KMF','CDF','DJF',
-                    'EGP','ERN','SZL','ETB','GMD','GHS','GNF','KES','LSL',
-                    'LRD','LYD','MGA','MWK','MRU','MUR','MAD','MZN','NAD',
-                    'NGN','RWF','STN','SCR','SLE','SOS','ZAR','SSP','SDG',
-                    'TZS','TND','UGX','XOF','ZMW','ZWL'
-                  ].map(c => <option key={c} value={c}>{c}</option>)}
-                </optgroup>
+                {currencies.length > 0
+                  ? currencies.map(c => <option key={c.currency_code} value={c.currency_code}>{c.currency_code} — {c.currency_name}</option>)
+                  : ['USD','EUR','GBP','SAR','AED','NGN','GHS','KES','ZAR'].map(c => <option key={c} value={c}>{c}</option>)
+                }
               </select>
             </div>
-            <div><label className="label">Currency Symbol</label><input className="input" value={appForm.currencySymbol} onChange={setApp('currencySymbol')} /></div>
+            <div><label className="label">Currency Symbol</label><input className="input" value={appForm.currencySymbol} onChange={setApp('currencySymbol')} placeholder="$" /></div>
             <div><label className="label">Receipt Prefix</label><input className="input" value={appForm.receiptPrefix} onChange={setApp('receiptPrefix')} placeholder="IECC" /></div>
             <div>
               <label className="label">Date Format</label>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import {
   Plus, Search, Edit2, ToggleLeft, ToggleRight, Save, Building2,
-  Users, UserPlus, Key, Shield, Trash2, RotateCcw, AlertCircle,
+  Users, UserPlus, Key, Shield, Trash2, RotateCcw, AlertCircle, Globe,
 } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import PageHeader from '../../components/ui/PageHeader'
@@ -13,7 +13,8 @@ const ORG_TYPES = [
 ]
 const EMPTY_ORG  = {
   name: '', orgType: 'Islamic Community Center', address: '', city: '', state: '',
-  country: 'USA', email: '', phone: '', website: '', timezone: 'America/Chicago',
+  country: '', countryName: '', email: '', phone: '', website: '',
+  timezone: '', currency: 'USD', currencySymbol: '$', dateFormat: 'DD/MM/YYYY',
   primaryColor: '#15803d', secondaryColor: '#d97706', subscriptionStatus: 'active',
 }
 const EMPTY_USER = { username: '', email: '', fullName: '', role: 'organization_admin', password: 'Admin@123!', phone: '' }
@@ -42,6 +43,11 @@ export default function OrganizationsPage() {
   const [orgs,    setOrgs]    = useState([])
   const [search,  setSearch]  = useState('')
   const [loading, setLoading] = useState(true)
+
+  // ── Reference data ────────────────────────────────────────────────────────────
+  const [countries,       setCountries]       = useState([])
+  const [currencies,      setCurrencies]      = useState([])
+  const [showCountryList, setShowCountryList] = useState(false)
 
   // ── Org form ─────────────────────────────────────────────────────────────────
   const [showOrgForm, setShowOrgForm] = useState(false)
@@ -87,6 +93,14 @@ export default function OrganizationsPage() {
 
   useEffect(() => { loadOrgs() }, [loadOrgs])
 
+  // ── Load reference data once ──────────────────────────────────────────────────
+  useEffect(() => {
+    Promise.all([window.api.countries.getAll(), window.api.currencies.getAll()]).then(([cr, cur]) => {
+      if (cr.success)  setCountries(cr.data)
+      if (cur.success) setCurrencies(cur.data)
+    })
+  }, [])
+
   // ── Load org users (called whenever the panel opens or filter changes) ────────
   const loadOrgUsers = useCallback(async () => {
     if (!selectedOrg) return
@@ -104,17 +118,53 @@ export default function OrganizationsPage() {
   useEffect(() => { loadOrgUsers() }, [loadOrgUsers])
 
   // ── Org CRUD ──────────────────────────────────────────────────────────────────
-  const openNewOrg  = () => { setEditingOrg(null); setOrgForm(EMPTY_ORG); setShowOrgForm(true); setOrgMsg('') }
-  const openEditOrg = (o) => {
+  const openNewOrg = () => {
+    setEditingOrg(null)
+    setOrgForm(EMPTY_ORG)
+    setShowCountryList(false)
+    setShowOrgForm(true)
+    setOrgMsg('')
+  }
+
+  const openEditOrg = async (o) => {
     setEditingOrg(o)
+    const countryObj = countries.find(c => c.country_code === o.country)
     setOrgForm({
       name: o.name, orgType: o.org_type, address: o.address || '', city: o.city || '',
-      state: o.state || '', country: o.country || 'USA', email: o.email || '',
-      phone: o.phone || '', website: o.website || '', timezone: o.timezone || 'America/Chicago',
+      state: o.state || '', country: o.country || '', countryName: countryObj?.country_name || o.country || '',
+      email: o.email || '', phone: o.phone || '', website: o.website || '',
+      timezone: o.timezone || '',
+      currency: 'USD', currencySymbol: '$', dateFormat: 'DD/MM/YYYY',
       primaryColor: o.primary_color || '#15803d', secondaryColor: o.secondary_color || '#d97706',
       subscriptionStatus: o.subscription_status || 'active',
     })
-    setShowOrgForm(true); setOrgMsg('')
+    const sr = await window.api.settings.getOrgSettings({ orgId: o.id })
+    if (sr.success && sr.data) {
+      setOrgForm(f => ({
+        ...f,
+        currency:       sr.data.currency        || 'USD',
+        currencySymbol: sr.data.currency_symbol || '$',
+        dateFormat:     sr.data.date_format      || 'DD/MM/YYYY',
+      }))
+    }
+    setShowCountryList(false)
+    setShowOrgForm(true)
+    setOrgMsg('')
+  }
+
+  const handleCountrySelect = async (c) => {
+    setShowCountryList(false)
+    const r = await window.api.settings.getCountryDefaults({ countryCode: c.country_code })
+    const d = (r.success && r.data) ? r.data : {}
+    setOrgForm(f => ({
+      ...f,
+      country:        c.country_code,
+      countryName:    c.country_name,
+      timezone:       d.timezone        || f.timezone,
+      currency:       d.default_currency || f.currency,
+      currencySymbol: d.currency_symbol  || f.currencySymbol,
+      dateFormat:     d.date_format      || f.dateFormat,
+    }))
   }
   const saveOrg = async () => {
     if (!orgForm.name.trim()) { setOrgMsg('Organization name is required'); return }
@@ -368,22 +418,98 @@ export default function OrganizationsPage() {
           <div><label className="label">Address</label><input className="input" value={orgForm.address} onChange={setO('address')} /></div>
           <div><label className="label">City</label><input className="input" value={orgForm.city} onChange={setO('city')} /></div>
           <div><label className="label">State/Province</label><input className="input" value={orgForm.state} onChange={setO('state')} /></div>
-          <div>
+
+          {/* Searchable country combobox */}
+          <div className="relative">
             <label className="label">Country</label>
-            <select className="input" value={orgForm.country} onChange={setO('country')}>
-              {['USA','Canada','UK','Australia','UAE','Saudi Arabia','Qatar','Kuwait','Malaysia','Other'].map(c =>
-                <option key={c} value={c}>{c}</option>
-              )}
-            </select>
+            <input
+              className="input"
+              value={orgForm.countryName}
+              onChange={e => {
+                setOrgForm(f => ({ ...f, countryName: e.target.value, country: '' }))
+                setShowCountryList(true)
+              }}
+              onFocus={() => setShowCountryList(true)}
+              onBlur={() => setTimeout(() => setShowCountryList(false), 150)}
+              placeholder="Type to search country…"
+              autoComplete="off"
+            />
+            {showCountryList && (
+              <div className="absolute z-50 w-full mt-1 max-h-52 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
+                {countries
+                  .filter(c =>
+                    !orgForm.countryName ||
+                    c.country_name.toLowerCase().includes(orgForm.countryName.toLowerCase()) ||
+                    c.country_code.toLowerCase().includes(orgForm.countryName.toLowerCase())
+                  )
+                  .map(c => (
+                    <button
+                      key={c.country_code}
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
+                      onMouseDown={() => handleCountrySelect(c)}
+                    >
+                      <span>{c.country_name}</span>
+                      <span className="text-xs text-gray-400 ml-2">{c.country_code}</span>
+                    </button>
+                  ))
+                }
+                {countries.filter(c =>
+                  !orgForm.countryName ||
+                  c.country_name.toLowerCase().includes(orgForm.countryName.toLowerCase()) ||
+                  c.country_code.toLowerCase().includes(orgForm.countryName.toLowerCase())
+                ).length === 0 && (
+                  <p className="px-3 py-2 text-sm text-gray-400">No countries found</p>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Timezone — populated from country selection, editable */}
           <div>
             <label className="label">Timezone</label>
             <select className="input" value={orgForm.timezone} onChange={setO('timezone')}>
-              {['America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Toronto','Europe/London','Asia/Riyadh','Asia/Dubai','Asia/Kuala_Lumpur'].map(t =>
-                <option key={t} value={t}>{t}</option>
+              {orgForm.timezone && !['America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Toronto','Europe/London','Asia/Riyadh','Asia/Dubai','Asia/Kuala_Lumpur'].includes(orgForm.timezone) && (
+                <option value={orgForm.timezone}>{orgForm.timezone}</option>
               )}
+              {[...new Set([
+                'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
+                'America/Toronto','Europe/London','Asia/Riyadh','Asia/Dubai','Asia/Kuala_Lumpur',
+                ...countries.map(c => c.timezone).filter(Boolean),
+              ])].sort().map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
+
+          {/* Currency — auto-populated from country, admin-overridable */}
+          <div>
+            <label className="label">Currency</label>
+            <select className="input" value={orgForm.currency} onChange={setO('currency')}>
+              {currencies.length > 0
+                ? currencies.map(c => <option key={c.currency_code} value={c.currency_code}>{c.currency_code} — {c.currency_name}</option>)
+                : ['USD','EUR','GBP','SAR','AED','QAR','KWD','NGN','GHS','KES','ZAR','MYR'].map(c => <option key={c} value={c}>{c}</option>)
+              }
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Currency Symbol</label>
+            <input className="input" value={orgForm.currencySymbol} onChange={setO('currencySymbol')} placeholder="e.g. $, £, ₦" />
+          </div>
+
+          <div>
+            <label className="label">Date Format</label>
+            <select className="input" value={orgForm.dateFormat} onChange={setO('dateFormat')}>
+              {['DD/MM/YYYY','MM/DD/YYYY','YYYY-MM-DD'].map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+
+          {/* Country auto-populate hint */}
+          {orgForm.country && (
+            <div className="sm:col-span-2 flex items-center gap-2 text-xs text-primary-700 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 rounded-xl px-3 py-2">
+              <Globe size={13} className="flex-shrink-0" />
+              <span>Timezone, currency, and date format were auto-populated from <strong>{orgForm.countryName}</strong>. You can override any field above.</span>
+            </div>
+          )}
           <div>
             <label className="label">Primary Color</label>
             <div className="flex gap-2">

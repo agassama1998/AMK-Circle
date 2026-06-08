@@ -44,6 +44,15 @@ module.exports = {
     } catch (e) { return { success: false, message: e.message } }
   },
 
+  'settings:getCountryDefaults': async (_, { countryCode } = {}) => {
+    try {
+      const country = dbGet('SELECT * FROM countries WHERE country_code = ?', countryCode)
+      if (!country) return { success: false, message: 'Country not found' }
+      const currency = dbGet('SELECT * FROM currencies WHERE currency_code = ?', country.default_currency)
+      return { success: true, data: { ...country, currency_symbol: currency?.currency_symbol || '' } }
+    } catch (e) { return { success: false, message: e.message } }
+  },
+
   'settings:updateOrg': async (_, data) => {
     const guard = denyReadOnly(data.token)
     if (guard) return guard
