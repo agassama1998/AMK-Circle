@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useSettings } from '../../context/SettingsContext'
 import { Plus, Search, Edit2, Save, UserCheck, Activity, AlertCircle, Trash2, CheckCircle } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import PageHeader from '../../components/ui/PageHeader'
@@ -19,6 +20,7 @@ const STATUS_DESCRIPTIONS = {
 
 export default function TeachersPage() {
   const { user, orgId, canManageStatus } = useAuth()
+  const { currencySymbol } = useSettings()
 
   const [teachers,     setTeachers]     = useState([])
   const [search,       setSearch]       = useState('')
@@ -173,7 +175,7 @@ export default function TeachersPage() {
                   <td className="td capitalize text-sm">{t.gender}</td>
                   <td className="td text-sm text-gray-500">{t.specialization || '—'}</td>
                   <td className="td text-sm text-gray-500">{t.phone || '—'}</td>
-                  <td className="td font-medium">{t.salary ? `$${Number(t.salary).toLocaleString()}` : '—'}</td>
+                  <td className="td font-medium">{t.salary ? `${currencySymbol}${Number(t.salary).toLocaleString()}` : '—'}</td>
                   <td className="td text-center">{t.class_count || 0}</td>
                   <td className="td">
                     <span className={`badge capitalize ${STATUS_COLOR[t.status] || 'badge-gray'}`}>{t.status}</span>

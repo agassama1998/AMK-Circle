@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useSettings } from '../../context/SettingsContext'
 import { Plus, Search, Edit2, Trash2, Save, DollarSign } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import PageHeader from '../../components/ui/PageHeader'
@@ -9,6 +10,7 @@ const EMPTY = { category:'utilities', description:'', amount:'', date: new Date(
 
 export default function ExpensesPage() {
   const { orgId } = useAuth()
+  const { currencySymbol } = useSettings()
   const [expenses, setExpenses] = useState([])
   const [search,   setSearch]   = useState('')
   const [filterCat, setFilterCat] = useState('')
@@ -47,7 +49,7 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <PageHeader title="Expenses" subtitle={`${expenses.length} records · Total: $${totalAmount.toLocaleString()}`} icon={DollarSign}
+      <PageHeader title="Expenses" subtitle={`${expenses.length} records · Total: ${currencySymbol}${totalAmount.toLocaleString()}`} icon={DollarSign}
         actions={<button onClick={openNew} className="btn-primary"><Plus size={16} /> Add Expense</button>}
       />
 
@@ -76,7 +78,7 @@ export default function ExpensesPage() {
                   <td className="td text-sm text-gray-500">{e.date}</td>
                   <td className="td"><span className="badge badge-gray capitalize">{e.category}</span></td>
                   <td className="td font-medium">{e.description}</td>
-                  <td className="td font-bold text-red-600">${Number(e.amount).toLocaleString()}</td>
+                  <td className="td font-bold text-red-600">{currencySymbol}{Number(e.amount).toLocaleString()}</td>
                   <td className="td text-sm text-gray-500">{e.vendor || '—'}</td>
                   <td className="td text-xs font-mono text-gray-400">{e.receipt_ref || '—'}</td>
                   <td className="td"><span className={`badge capitalize ${e.status==='approved'?'badge-green':'badge-gold'}`}>{e.status}</span></td>
@@ -109,7 +111,7 @@ export default function ExpensesPage() {
           </div>
           <div><label className="label">Description *</label><input className="input" value={form.description} onChange={set('description')} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Amount ($) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={set('amount')} /></div>
+            <div><label className="label">Amount ({currencySymbol}) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={set('amount')} /></div>
             <div><label className="label">Date</label><input type="date" className="input" value={form.date} onChange={set('date')} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useSettings } from '../../context/SettingsContext'
 import { Plus, Search, Edit2, Trash2, Save, Wallet, Printer } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import PageHeader from '../../components/ui/PageHeader'
@@ -14,6 +15,7 @@ const TYPE_COLOR = { tuition:'badge-blue', donation:'badge-green', zakat:'badge-
 
 export default function FinancePage() {
   const { orgId, user } = useAuth()
+  const { currencySymbol, fmtCurrencyInt } = useSettings()
   const [payments, setPayments] = useState([])
   const [students, setStudents] = useState([])
   const [summary,  setSummary]  = useState(null)
@@ -75,13 +77,12 @@ export default function FinancePage() {
   const printReceipt = async (p) => {
     try {
       const orgR = await window.api.settings.getOrg({ orgId })
-      const org  = orgR.success ? orgR.data : null
+      const org  = { ...(orgR.success ? orgR.data : null), currency_symbol: currencySymbol }
       await generateReceipt(p, org)
     } catch (e) { alert('Could not generate receipt: ' + e.message) }
   }
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
-  const fmt = n => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(n||0)
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -92,10 +93,10 @@ export default function FinancePage() {
       {/* Summary Stats */}
       {summary && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard icon={Wallet} label="Total Income"   value={fmt(summary.totalIncome)}   color="primary" />
-          <StatsCard icon={Wallet} label="Donations"      value={fmt(summary.totalIncome - (summary.byType?.find(t=>t.payment_type==='tuition')?.total||0))} color="gold" />
-          <StatsCard icon={Wallet} label="Tuition"        value={fmt(summary.byType?.find(t=>t.payment_type==='tuition')?.total||0)} color="blue" />
-          <StatsCard icon={Wallet} label="Net Balance"    value={fmt(summary.totalIncome - summary.totalExpense)} color="green" />
+          <StatsCard icon={Wallet} label="Total Income"   value={fmtCurrencyInt(summary.totalIncome)}   color="primary" />
+          <StatsCard icon={Wallet} label="Donations"      value={fmtCurrencyInt(summary.totalIncome - (summary.byType?.find(t=>t.payment_type==='tuition')?.total||0))} color="gold" />
+          <StatsCard icon={Wallet} label="Tuition"        value={fmtCurrencyInt(summary.byType?.find(t=>t.payment_type==='tuition')?.total||0)} color="blue" />
+          <StatsCard icon={Wallet} label="Net Balance"    value={fmtCurrencyInt(summary.totalIncome - summary.totalExpense)} color="green" />
         </div>
       )}
 
@@ -138,7 +139,7 @@ export default function FinancePage() {
                   <td className="td text-sm text-gray-500">{p.student_name || '—'}</td>
                   <td className="td"><span className={`badge capitalize ${TYPE_COLOR[p.payment_type] || 'badge-gray'}`}>{p.payment_type}</span></td>
                   <td className="td capitalize text-sm text-gray-500">{p.payment_method}</td>
-                  <td className="td font-bold text-primary-700 dark:text-primary-400">${Number(p.amount).toLocaleString()}</td>
+                  <td className="td font-bold text-primary-700 dark:text-primary-400">{currencySymbol}{Number(p.amount).toLocaleString()}</td>
                   <td className="td"><span className={`badge capitalize ${p.status==='paid'?'badge-green':p.status==='pending'?'badge-gold':'badge-gray'}`}>{p.status}</span></td>
                   <td className="td">
                     <div className="flex gap-1">
@@ -179,7 +180,7 @@ export default function FinancePage() {
               {students.map(s => <option key={s.id} value={s.id}>{s.full_name} ({s.student_id})</option>)}
             </select>
           </div>
-          <div><label className="label">Amount ($) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={set('amount')} /></div>
+          <div><label className="label">Amount ({currencySymbol}) *</label><input type="number" step="0.01" className="input" value={form.amount} onChange={set('amount')} /></div>
           <div>
             <label className="label">Payment Type *</label>
             <select className="input" value={form.paymentType} onChange={set('paymentType')}>

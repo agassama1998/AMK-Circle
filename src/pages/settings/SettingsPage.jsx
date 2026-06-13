@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useSettings } from '../../context/SettingsContext'
 import { Save, Settings, Building2, Key, Database, Shield, Globe } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 
@@ -12,6 +13,7 @@ const TABS = [
 
 export default function SettingsPage() {
   const { user, orgId, updateUser } = useAuth()
+  const { reload: reloadSettings } = useSettings()
   const [tab, setTab] = useState(0)
 
   // Org settings
@@ -88,7 +90,7 @@ export default function SettingsPage() {
     setSaving(true)
     const r = await window.api.settings.updateOrgSettings({ orgId, ...appForm })
     setSaving(false)
-    if (r.success) notify(1, 'Settings saved')
+    if (r.success) { notify(1, 'Settings saved'); reloadSettings() }
     else notify(1, r.message, 'error')
   }
 

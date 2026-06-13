@@ -14,6 +14,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useSettings } from '../../context/SettingsContext'
 import {
   User, ClipboardList, BookMarked, Wallet, Bell,
   CheckCircle, XCircle, Clock, Award, BookOpen, TrendingUp
@@ -48,6 +49,7 @@ function SectionHeader({ icon: Icon, title }) {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function StudentDashboard() {
   const { user } = useAuth()
+  const { currencySymbol } = useSettings()
   const orgId = user?.orgId
 
   const [student,       setStudent]       = useState(null)
@@ -270,7 +272,7 @@ export default function StudentDashboard() {
           <SectionHeader icon={Wallet} title="Fee / Payment History" />
           <div className="mb-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
             <p className="text-xs text-emerald-600">Total Paid</p>
-            <p className="text-xl font-bold text-emerald-700">${totalPaid.toFixed(2)}</p>
+            <p className="text-xl font-bold text-emerald-700">{currencySymbol}{totalPaid.toFixed(2)}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="table text-xs">
@@ -289,7 +291,7 @@ export default function StudentDashboard() {
                     <td>{p.date}</td>
                     <td className="font-mono text-[11px]">{p.receipt_number}</td>
                     <td className="capitalize">{p.payment_type?.replace('_', ' ')}</td>
-                    <td className="font-semibold">${Number(p.amount).toFixed(2)}</td>
+                    <td className="font-semibold">{currencySymbol}{Number(p.amount).toFixed(2)}</td>
                     <td>
                       <span className={`badge ${p.status === 'paid' ? 'badge-green' : 'badge-amber'}`}>
                         {p.status}

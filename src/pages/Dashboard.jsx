@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useSettings } from '../context/SettingsContext'
 import StatsCard from '../components/ui/StatsCard'
 import { Users, UserCheck, BookOpen, Calendar, Wallet, Heart, TrendingUp, Clock, Star } from 'lucide-react'
 import {
@@ -9,12 +10,9 @@ import {
 
 const COLORS = ['#15803d','#d97706','#3b82f6','#8b5cf6','#ef4444','#06b6d4']
 
-function formatCurrency(n) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n || 0)
-}
-
 export default function Dashboard() {
   const { user, orgId } = useAuth()
+  const { currencySymbol, fmtCurrencyInt } = useSettings()
   const [stats,   setStats]   = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -56,9 +54,9 @@ export default function Dashboard() {
         <StatsCard icon={UserCheck} label="Active Teachers" value={s.totalTeachers || 0} sub="staff members"   color="blue" />
         <StatsCard icon={BookOpen}  label="Classes"         value={s.totalClasses  || 0} sub="running"         color="purple" />
         <StatsCard icon={Calendar}  label="Upcoming Events" value={s.upcomingEvents || 0} sub="scheduled"      color="gold" />
-        <StatsCard icon={Wallet}    label="Total Income"    value={formatCurrency(s.totalIncome)} sub="all time" color="green" />
-        <StatsCard icon={Heart}     label="Donations"       value={formatCurrency(s.totalDonations)} sub="all types" color="gold" />
-        <StatsCard icon={TrendingUp} label="Expenses"       value={formatCurrency(s.totalExpenses)} sub="all time"  color="red" />
+        <StatsCard icon={Wallet}    label="Total Income"    value={fmtCurrencyInt(s.totalIncome)} sub="all time" color="green" />
+        <StatsCard icon={Heart}     label="Donations"       value={fmtCurrencyInt(s.totalDonations)} sub="all types" color="gold" />
+        <StatsCard icon={TrendingUp} label="Expenses"       value={fmtCurrencyInt(s.totalExpenses)} sub="all time"  color="red" />
         <StatsCard icon={Clock}     label="Present Today"   value={s.todayPresent || 0} sub="students"         color="primary" />
       </div>
 
@@ -81,8 +79,8 @@ export default function Dashboard() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v >= 1000 ? `${v/1000}k` : v}`} />
-              <Tooltip formatter={(v) => formatCurrency(v)} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${currencySymbol}${v >= 1000 ? `${v/1000}k` : v}`} />
+              <Tooltip formatter={(v) => fmtCurrencyInt(v)} />
               <Legend />
               <Area type="monotone" dataKey="income"  name="Income"  stroke="#15803d" fill="url(#incGrad)" strokeWidth={2} />
               <Area type="monotone" dataKey="expense" name="Expense" stroke="#ef4444" fill="url(#expGrad)" strokeWidth={2} />
@@ -101,7 +99,7 @@ export default function Dashboard() {
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v) => formatCurrency(v)} />
+              <Tooltip formatter={(v) => fmtCurrencyInt(v)} />
               <Legend iconSize={10} formatter={(v) => <span className="capitalize text-xs">{v}</span>} />
             </PieChart>
           </ResponsiveContainer>
@@ -136,7 +134,7 @@ export default function Dashboard() {
                   <p className="text-xs text-gray-400 capitalize">{p.payment_type} · {p.date}</p>
                 </div>
                 <span className="text-sm font-bold text-primary-700 dark:text-primary-400">
-                  {formatCurrency(p.amount)}
+                  {fmtCurrencyInt(p.amount)}
                 </span>
               </div>
             ))}

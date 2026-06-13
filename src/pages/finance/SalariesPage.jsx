@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useSettings } from '../../context/SettingsContext'
 import { Plus, Save, Heart, Edit2 } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import PageHeader from '../../components/ui/PageHeader'
 
 export default function SalariesPage() {
   const { orgId } = useAuth()
+  const { currencySymbol } = useSettings()
   const [salaries,  setSalaries]  = useState([])
   const [teachers,  setTeachers]  = useState([])
   const [filterMonth, setFilterMonth] = useState('')
@@ -46,7 +48,7 @@ export default function SalariesPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <PageHeader title="Salary Management" subtitle={`Total: $${total.toLocaleString()}`} icon={Heart}
+      <PageHeader title="Salary Management" subtitle={`Total: ${currencySymbol}${total.toLocaleString()}`} icon={Heart}
         actions={<button onClick={openNew} className="btn-primary"><Plus size={16} /> Add Salary</button>}
       />
 
@@ -71,10 +73,10 @@ export default function SalariesPage() {
                     <div className="text-xs text-gray-400">{s.employee_id} · {s.specialization}</div>
                   </td>
                   <td className="td font-mono text-sm">{s.month}</td>
-                  <td className="td">${Number(s.base_amount).toLocaleString()}</td>
-                  <td className="td text-green-600">+${Number(s.allowances||0).toLocaleString()}</td>
-                  <td className="td text-red-500">-${Number(s.deductions||0).toLocaleString()}</td>
-                  <td className="td font-bold text-primary-700 dark:text-primary-400">${Number(s.net_amount).toLocaleString()}</td>
+                  <td className="td">{currencySymbol}{Number(s.base_amount).toLocaleString()}</td>
+                  <td className="td text-green-600">+{currencySymbol}{Number(s.allowances||0).toLocaleString()}</td>
+                  <td className="td text-red-500">-{currencySymbol}{Number(s.deductions||0).toLocaleString()}</td>
+                  <td className="td font-bold text-primary-700 dark:text-primary-400">{currencySymbol}{Number(s.net_amount).toLocaleString()}</td>
                   <td className="td"><span className={`badge capitalize ${s.status==='paid'?'badge-green':'badge-gold'}`}>{s.status}</span></td>
                   <td className="td"><button onClick={() => openEdit(s)} className="btn-icon"><Edit2 size={14} /></button></td>
                 </tr>
@@ -100,13 +102,13 @@ export default function SalariesPage() {
           </div>
           <div><label className="label">Month *</label><input type="month" className="input" value={form.month} onChange={set('month')} disabled={!!editing} /></div>
           <div className="grid grid-cols-3 gap-3">
-            <div><label className="label">Base ($) *</label><input type="number" className="input" value={form.baseAmount} onChange={set('baseAmount')} /></div>
+            <div><label className="label">Base ({currencySymbol}) *</label><input type="number" className="input" value={form.baseAmount} onChange={set('baseAmount')} /></div>
             <div><label className="label">Allowances</label><input type="number" className="input" value={form.allowances} onChange={set('allowances')} /></div>
             <div><label className="label">Deductions</label><input type="number" className="input" value={form.deductions} onChange={set('deductions')} /></div>
           </div>
           <div className="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl text-center">
             <span className="text-sm text-gray-500">Net Amount: </span>
-            <span className="text-xl font-bold text-primary-700">${net(form).toLocaleString()}</span>
+            <span className="text-xl font-bold text-primary-700">{currencySymbol}{net(form).toLocaleString()}</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Payment Date</label><input type="date" className="input" value={form.paymentDate} onChange={set('paymentDate')} /></div>

@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable'
 export async function generateReceipt(payment, org) {
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a5' })
   const pw  = doc.internal.pageSize.getWidth()
+  const currSym = org?.currency_symbol || '$'
 
   // Colors
   const primary = org?.primary_color || '#15803d'
@@ -74,7 +75,7 @@ export async function generateReceipt(payment, org) {
   doc.text('AMOUNT PAID', pw / 2, y + 7, { align:'center' })
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
-  doc.text(`$${Number(payment.amount).toLocaleString('en-US', { minimumFractionDigits:2 })}`, pw / 2, y + 14, { align:'center' })
+  doc.text(`${currSym}${Number(payment.amount).toLocaleString('en-US', { minimumFractionDigits:2 })}`, pw / 2, y + 14, { align:'center' })
   y += 26
 
   // Status
@@ -140,6 +141,7 @@ export async function generateStudentReport(students, org) {
 export async function generateFinancialReport(payments, summary, org) {
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' })
   const pw  = doc.internal.pageSize.getWidth()
+  const currSym = org?.currency_symbol || '$'
 
   doc.setFillColor(21, 128, 61)
   doc.rect(0, 0, pw, 20, 'F')
@@ -151,10 +153,10 @@ export async function generateFinancialReport(payments, summary, org) {
   // Summary
   autoTable(doc, {
     startY: 25,
-    head: [['Payment Type','Count','Total ($)']],
-    body: summary.map(s => [s.type, s.count, `$${Number(s.total).toLocaleString()}`]),
+    head: [['Payment Type','Count',`Total (${currSym})`]],
+    body: summary.map(s => [s.type, s.count, `${currSym}${Number(s.total).toLocaleString()}`]),
     headStyles: { fillColor:[217,119,6], textColor:255 },
-    foot: [['Total', summary.reduce((a,b) => a+b.count,0), `$${summary.reduce((a,b) => a+(b.total||0),0).toLocaleString()}`]],
+    foot: [['Total', summary.reduce((a,b) => a+b.count,0), `${currSym}${summary.reduce((a,b) => a+(b.total||0),0).toLocaleString()}`]],
     footStyles: { fillColor:[21,128,61], textColor:255, fontStyle:'bold' },
     margin: { left:10, right:10 },
   })
@@ -163,7 +165,7 @@ export async function generateFinancialReport(payments, summary, org) {
   autoTable(doc, {
     startY,
     head: [['Receipt','Date','Payer','Type','Method','Amount']],
-    body: payments.map(p => [p.receipt_number, p.date, p.person_name, p.payment_type, p.payment_method, `$${Number(p.amount).toLocaleString()}`]),
+    body: payments.map(p => [p.receipt_number, p.date, p.person_name, p.payment_type, p.payment_method, `${currSym}${Number(p.amount).toLocaleString()}`]),
     headStyles: { fillColor:[21,128,61], textColor:255, fontSize:8 },
     bodyStyles: { fontSize:7 },
     margin: { left:10, right:10 },
