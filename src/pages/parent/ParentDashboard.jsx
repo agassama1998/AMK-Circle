@@ -11,6 +11,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useSettings } from '../../context/SettingsContext'
 import {
   Heart, ClipboardList, BookMarked, Wallet, Bell,
   User, ChevronRight, BookOpen
@@ -44,6 +45,7 @@ function SectionHeader({ icon: Icon, title }) {
 
 // ─── Per-child data panel ─────────────────────────────────────────────────────
 function ChildPanel({ child, orgId }) {
+  const { currencySymbol } = useSettings()
   const [attStats,   setAttStats]   = useState(null)
   const [attHistory, setAttHistory] = useState([])
   const [payments,   setPayments]   = useState([])
@@ -176,7 +178,7 @@ function ChildPanel({ child, orgId }) {
           <SectionHeader icon={Wallet} title="Payments" />
           <div className="mb-2 p-2 rounded bg-emerald-50 border border-emerald-200 text-center">
             <p className="text-xs text-emerald-600">Total Paid</p>
-            <p className="text-lg font-bold text-emerald-700">${totalPaid.toFixed(2)}</p>
+            <p className="text-lg font-bold text-emerald-700">{currencySymbol}{totalPaid.toFixed(2)}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="table text-xs">
@@ -186,7 +188,7 @@ function ChildPanel({ child, orgId }) {
                   <tr key={p.id}>
                     <td>{p.date}</td>
                     <td className="capitalize">{p.payment_type?.replace('_', ' ')}</td>
-                    <td className="font-semibold">${Number(p.amount).toFixed(2)}</td>
+                    <td className="font-semibold">{currencySymbol}{Number(p.amount).toFixed(2)}</td>
                     <td>
                       <span className={`badge ${p.status === 'paid' ? 'badge-green' : 'badge-amber'}`}>{p.status}</span>
                     </td>

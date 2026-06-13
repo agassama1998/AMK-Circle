@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useSettings } from '../../context/SettingsContext'
 import { Plus, Edit2, Save, Bed } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import PageHeader from '../../components/ui/PageHeader'
 
 export default function BoardingPage() {
   const { orgId } = useAuth()
+  const { currencySymbol } = useSettings()
   const [tab, setTab] = useState(0)
   const [dorms,       setDorms]       = useState([])
   const [assignments, setAssignments] = useState([])
@@ -114,7 +116,7 @@ export default function BoardingPage() {
                     <td className="td text-sm">{a.room_number || '—'}</td>
                     <td className="td text-sm">{a.bed_number || '—'}</td>
                     <td className="td text-sm text-gray-500">{a.check_in_date || '—'}</td>
-                    <td className="td font-medium">{a.boarding_fee ? `$${a.boarding_fee}` : '—'}</td>
+                    <td className="td font-medium">{a.boarding_fee ? `${currencySymbol}${a.boarding_fee}` : '—'}</td>
                     <td className="td capitalize text-sm">{a.meal_plan}</td>
                     <td className="td"><span className={`badge capitalize ${a.status==='active'?'badge-green':'badge-gray'}`}>{a.status}</span></td>
                   </tr>

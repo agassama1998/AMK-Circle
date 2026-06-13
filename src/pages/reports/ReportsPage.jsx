@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useSettings } from '../../context/SettingsContext'
 import { BarChart3, Download } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import { exportToExcel } from '../../utils/excel'
@@ -12,10 +13,10 @@ const COLORS = ['#15803d','#d97706','#3b82f6','#8b5cf6','#ef4444','#06b6d4','#f9
 
 const TABS = ['Financial','Students','Attendance','Hifz','Audit Logs']
 
-function fmt(n) { return `$${Number(n||0).toLocaleString()}` }
-
 export default function ReportsPage() {
   const { orgId } = useAuth()
+  const { fmtCurrencyInt } = useSettings()
+  const fmt = (n) => fmtCurrencyInt(n)
   const [tab, setTab] = useState(0)
 
   // Financial
