@@ -15,7 +15,7 @@ const TYPE_COLOR = { tuition:'badge-blue', donation:'badge-green', zakat:'badge-
 
 export default function FinancePage() {
   const { orgId, user } = useAuth()
-  const { currencySymbol, fmtCurrencyInt } = useSettings()
+  const { currencySymbol, fmtCurrencyInt, receiptPrefix } = useSettings()
   const [payments, setPayments] = useState([])
   const [students, setStudents] = useState([])
   const [summary,  setSummary]  = useState(null)
@@ -77,7 +77,7 @@ export default function FinancePage() {
   const printReceipt = async (p) => {
     try {
       const orgR = await window.api.settings.getOrg({ orgId })
-      const org  = { ...(orgR.success ? orgR.data : null), currency_symbol: currencySymbol }
+      const org  = { ...(orgR.success ? orgR.data : null), currency_symbol: currencySymbol, receipt_prefix: receiptPrefix }
       await generateReceipt(p, org)
     } catch (e) { alert('Could not generate receipt: ' + e.message) }
   }
@@ -165,7 +165,7 @@ export default function FinancePage() {
         {msg && <p className="text-sm text-red-500 mb-3">{msg}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="label">Receipt #</label>
+            <label className="label">Receipt # ({receiptPrefix}-)</label>
             <input className="input font-mono" value={form.receiptNumber || nextReceipt} readOnly={!editing} onChange={set('receiptNumber')} />
           </div>
           <div><label className="label">Date</label><input type="date" className="input" value={form.date} onChange={set('date')} /></div>

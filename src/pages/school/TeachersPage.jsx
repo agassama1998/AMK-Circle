@@ -226,7 +226,7 @@ export default function TeachersPage() {
           <div><label className="label">Phone</label><input className="input" value={form.phone} onChange={set('phone')} /></div>
           <div><label className="label">Specialization</label><input className="input" value={form.specialization} onChange={set('specialization')} placeholder="e.g. Quran, Arabic, Math" /></div>
           <div><label className="label">Hire Date</label><input type="date" className="input" value={form.hireDate} onChange={set('hireDate')} /></div>
-          <div><label className="label">Monthly Salary ($)</label><input type="number" className="input" value={form.salary} onChange={set('salary')} /></div>
+          <div><label className="label">Monthly Salary ({currencySymbol})</label><input type="number" className="input" value={form.salary} onChange={set('salary')} /></div>
           <div>
             <label className="label">Status</label>
             <select className="input" value={form.status} onChange={set('status')}>
